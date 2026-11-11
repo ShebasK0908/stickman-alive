@@ -67,7 +67,36 @@ final class FloatingSceneEngine {
         }
     }
 
+    // V10: la ventanita comparte el motor procedural de la vista
+    // principal (mismo solucionador, misma marcha generada): camina e
+    // idle pasan por los generadores; sentarse/dormir/poderes siguen
+    // saliendo de sus clips pero a traves de los muelles (peso).
+    private let procBody = ProceduralBody()
+
     func currentPose() -> SkeletonPose {
+        var ctx = ProceduralContext(action: .idle, time: animTime)
+        ctx.facing = facing
+        ctx.animTime = animTime
+        switch mode {
+        case .walk:
+            ctx.action = .walking
+            ctx.gaitPhase01 = (gaitTime / 0.8).truncatingRemainder(dividingBy: 1)
+            if ctx.gaitPhase01 < 0 { ctx.gaitPhase01 += 1 }
+            ctx.speedNorm = 0.12
+            ctx.moveSpeed = 62
+        case .idle:
+            ctx.action = .idle
+        case .sit:
+            ctx.action = .sitting
+        case .sleep:
+            ctx.action = .sleeping
+        case .power:
+            ctx.action = .usingPower
+        }
+        return procBody.resolve(context: ctx, clipPose: { clipPose() })
+    }
+
+    private func clipPose() -> SkeletonPose {
         switch mode {
         case .walk: return AnimationLibrary.walk.sample(at: gaitTime)
         case .idle: return AnimationLibrary.idle.sample(at: animTime)
