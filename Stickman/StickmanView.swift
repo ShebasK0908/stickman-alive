@@ -66,6 +66,29 @@ struct StickmanCanvasView: View {
         static let flightLegTrail: CGFloat = 2.4
     }
 
+    // V10 · MOTOR PROCEDURAL: el solucionador vive en la vista y
+    // persiste entre frames (posiciones/velocidades de muelle, angulo
+    // de giro). Se resuelve UNA vez por frame en drawScene y
+    // jointPoints/drawStickman consumen la pose ya resuelta.
+    @State private var procBody = ProceduralBody()
+
+    private func procContext(_ c: StickmanController) -> ProceduralContext {
+        ProceduralContext(
+            action: c.action, surfaceIsFloor: c.surface == .floor, facing: c.facing,
+            gaitPhase01: c.gaitPhase01, speedNorm: c.speedNorm, moveSpeed: c.moveSpeed,
+            animTime: c.animTime, time: c.phase, velocityY: c.velocityY,
+            isAirborne: c.isAirborne, isJumpWindingUp: c.isJumpWindingUp,
+            isSkidding: c.isSkidding, isTurning: c.isTurning, isWallSliding: c.isWallSliding,
+            pinchLean: c.pinchLean, microActivity: c.microActivity,
+            hasCinematicPose: c.cinematicPose != nil)
+    }
+
+    /// La pose del frame: la resuelta por el motor procedural; si por
+    /// lo que sea aun no hay (primer frame), la muestreada del clip.
+    private func resolvedPose() -> SkeletonPose {
+        procBody.framePose ?? currentPose()
+    }
+
     var body: some View {
         Canvas { context, size in
             drawScene(context: &context, size: size)
@@ -100,6 +123,10 @@ struct StickmanCanvasView: View {
     private func drawScene(context: inout GraphicsContext, size: CGSize) {
         let groundY = size.height - 10
         let c = controller
+        // V10: resolver la pose del frame ANTES de dibujar nada, para
+        // que efectos de poder, fantasmas y cuerpo compartan la misma
+        // pose resuelta (generadores procedurales + muelles).
+        _ = procBody.resolve(context: procContext(c), clipPose: { currentPose() })
         let cx = screenX(size: size)
         let effectiveGround = feetY(size: size)
 
@@ -542,7 +569,7 @@ struct StickmanCanvasView: View {
 
     private func jointPoints(cx: CGFloat, ground: CGFloat) -> JointPoints {
         let c = controller
-        let pose = currentPose()
+        let pose = resolvedPose()
         let f = c.facing
         let flip = isFlipped
         // ESCALA 0,8 + PROPORCIONES (ViewTuning): todos los offsets de
@@ -594,6 +621,22 @@ struct StickmanCanvasView: View {
             j.footL = shift(j.footL, sway * 0.7, bob + legLag * ViewTuning.flightLegTrail * fs)
             j.footR = shift(j.footR, sway * 0.7, bob - legLag * ViewTuning.flightLegTrail * fs)
         }
+        // V10: GIRO DEL CUERPO ENTERO alrededor de la cadera (el
+        // vuelco del lanzado y la inclinacion del salto): el angulo lo
+        // integra el solucionador — giro con velocidad angular y
+        // recuperacion elastica al aterrizar. En el techo no se
+        // aplica: alli manda el ancla invertida.
+        if !flip && procBody.bodyAngle != 0 {
+            let ca = CGFloat(cos(Double(procBody.bodyAngle)))
+            let sa = CGFloat(sin(Double(procBody.bodyAngle)))
+            func rot(_ p: CGPoint) -> CGPoint {
+                let dx = p.x - j.hip.x, dy = p.y - j.hip.y
+                return CGPoint(x: j.hip.x + dx * ca - dy * sa, y: j.hip.y + dx * sa + dy * ca)
+            }
+            j = JointPoints(hip: j.hip, neck: rot(j.neck), head: rot(j.head),
+                            elbowL: rot(j.elbowL), handL: rot(j.handL), elbowR: rot(j.elbowR), handR: rot(j.handR),
+                            kneeL: rot(j.kneeL), footL: rot(j.footL), kneeR: rot(j.kneeR), footR: rot(j.footR))
+        }
         if flip {
             func m(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x, y: ground - p.y) }
             j = JointPoints(hip: m(j.hip), neck: m(j.neck), head: m(j.head),
@@ -637,7 +680,7 @@ struct StickmanCanvasView: View {
         let f = c.facing
         var ctx = context; ctx.opacity = opacity
         let j = jointPoints(cx: cx, ground: ground)
-        let pose = currentPose()
+        let pose = resolvedPose()
         let color: Color = c.action == .drawn ? .gray : bodyColor
         // Trazo del cuerpo: el del personaje x escala global (10 x 0,8
         // = 8, ~6,5 % del alto: dentro del 5-8 % de los modelos).
