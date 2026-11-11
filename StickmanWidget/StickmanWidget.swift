@@ -142,11 +142,11 @@ private struct StickmanCanvas: View {
             floor.addLine(to: CGPoint(x: size.width / scale / 2 - 4, y: 0))
             ctx.stroke(floor, with: .color(.gray.opacity(0.5)), lineWidth: 2.5 / scale * 1.6)
 
-            // Aura del modo poder / fuego
+            // Aura del modo poder / fuego: pegada al cuerpo
             if kind == .power || kind == .fire {
                 var aura = ctx
-                aura.opacity = 0.18
-                aura.fill(Path(ellipseIn: CGRect(x: -58, y: -168, width: 116, height: 168)), with: .color(.yellow))
+                aura.opacity = 0.14
+                aura.fill(Path(ellipseIn: CGRect(x: -48, y: -160, width: 96, height: 160)), with: .color(.orange))
             }
             // Llama del boton Fuego
             if kind == .fire {
@@ -162,17 +162,24 @@ private struct StickmanCanvas: View {
             }
 
             let ink = Color(red: 0.945, green: 0.506, blue: 0.047)
+            // Miembros CURVOS como en la app (cuadratica por la articulacion)
+            func limb(_ path: inout Path, _ a: CGPoint, _ joint: CGPoint, _ b: CGPoint) {
+                let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+                let control = CGPoint(x: 2 * joint.x - mid.x, y: 2 * joint.y - mid.y)
+                path.move(to: a); path.addQuadCurve(to: b, control: control)
+            }
             var body = Path()
             body.move(to: hip); body.addLine(to: neck)
-            body.move(to: hip); body.addLine(to: kneeL); body.addLine(to: footL)
-            body.move(to: hip); body.addLine(to: kneeR); body.addLine(to: footR)
-            body.move(to: neck); body.addLine(to: elbowL); body.addLine(to: handL)
-            body.move(to: neck); body.addLine(to: elbowR); body.addLine(to: handR)
+            limb(&body, hip, kneeL, footL)
+            limb(&body, hip, kneeR, footR)
+            limb(&body, neck, elbowL, handL)
+            limb(&body, neck, elbowR, handR)
             ctx.stroke(body, with: .color(ink), style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
 
-            // Cabeza de anillo hueco, como en la app
-            let headH = 40 * pose.squash
-            let headW = 40 * (1 + (1 - pose.squash) * 0.55)
+            // Cabeza de anillo hueco, squash amortiguado como en la app
+            let sq = min(1.07, max(0.93, pose.squash))
+            let headH = 40 * sq
+            let headW = 40 * (1 + (1 - sq) * 0.55)
             ctx.stroke(Path(ellipseIn: CGRect(x: head.x - headW / 2, y: head.y - headH / 2, width: headW, height: headH)),
                        with: .color(ink), lineWidth: 9.5)
         }
