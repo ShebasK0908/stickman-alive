@@ -1,30 +1,37 @@
 import SwiftUI
 
 // MARK: - Escena: un programa de animacion falso tipo Adobe Animate
-// El stickman vive AHI dentro: lienzo, toolbar, timeline y botones son su mundo.
+// Los stickmen viven AHI dentro: lienzo, toolbar, timeline y botones son su mundo.
 //
 // v2 — POR QUE LA TOOLBAR DE LA v1 NO RESPONDIA (diagnostico):
 //  1) Era un VStack de Image(systemName:) SIN botones: puro dibujo.
 //  2) El lienzo llevaba un DragGesture(minimumDistance: 0) que lo
 //     interpretaba TODO como cursor/arrastre, y no existia ningun modo
 //     lapiz/goma ni trazos en el modelo.
-// SOLUCION v2: la toolbar es una columna de Buttons REALES, en un HStack
-// HERMANO del lienzo (fuera del GeometryReader y de su gesto), cada uno
-// de >=52 pt. El unico gesto es el del lienzo, y se RAMIFICA por el modo
-// activo: cursor = agarrar/tocar, lapiz = trazo, goma = borrar. Nunca
-// hay dos gestos compitiendo y el stickman no puede robar toques de la
-// toolbar porque Canvas tiene allowsHitTesting(false) y la toolbar esta
-// fisicamente fuera del area del gesto.
+// SOLUCION v2 (se mantiene en v3): la toolbar es una columna de Buttons
+// REALES, en un HStack HERMANO del lienzo (fuera del GeometryReader y de
+// su gesto), cada uno de >=52 pt. El unico gesto es el del lienzo, y se
+// RAMIFICA por el modo activo: cursor = agarrar/tocar, lapiz = trazo,
+// goma = borrar.
+//
+// v3: DOS personajes en escena — The Chosen One (negro, poderes) y
+// Victim (gris, lazo/cursor/trabajo) — cada uno con su controlador y su
+// cerebro. Comparten los trazos del usuario (toda operacion de trazo se
+// aplica a AMBOS controladores, que mantienen copias identicas) y cada
+// uno dibuja sus propios objetos/criaturas en su Canvas. El gesto de
+// arrastre agarra al personaje MAS CERCANO al dedo; el toque reacciona
+// en el mas cercano; la percepcion del dedo llega a los dos.
 
 struct ContentView: View {
-    @StateObject private var controller = StickmanController()
+    @StateObject private var tco = StickmanController(kind: .chosenOne)
+    @StateObject private var victim = StickmanController(kind: .victim)
 
     @State private var showBrain = false
     @State private var showConsole = false
     @State private var consoleCount = 0
     @State private var consoleFinishedWait = 0.0
     @State private var cursorPoint: CGPoint? = nil
-    @State private var draggingStickman = false
+    @State private var dragTarget: CharacterKind? = nil
     @State private var dragChecked = false
     @State private var strokeStarted = false
 
@@ -34,10 +41,14 @@ struct ContentView: View {
     private let consoleText = """
     $ python3 bring_to_life.py
     import stickman
-    stickman = dibujar(color = "naranja")
-    stickman.awake()   # esto es broma, como en el video ;)
-    > DESPERTANDO...
+    tco = dibujar(color = "negro")   # The Chosen One
+    victim = dibujar(color = "gris") # el de AvA 1...
+    tco.awake(); victim.awake()   # esto es broma, como en el video ;)
+    > DESPERTANDO A LOS DOS...
     """
+
+    private var both: [StickmanController] { [tco, victim] }
+    private func controller(for kind: CharacterKind) -> StickmanController { kind == .chosenOne ? tco : victim }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,7 +58,7 @@ struct ContentView: View {
             modeStatusRow
             timeline
             suggestionBar
-            Text("Las órdenes son sugerencias: tiene su propio cerebro e IA para defenderse de tu dedo.")
+            Text("Las órdenes son sugerencias: tienen su propio cerebro, roaming 360° e IA para defenderse de tu dedo.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -56,11 +67,12 @@ struct ContentView: View {
         }
         .background(Color(red: 0.16, green: 0.16, blue: 0.18))
         .onReceive(consoleTimer) { _ in typeConsole() }
-        .onChange(of: controller.dragEscapeSignal) { _ in
-            // El stickman se ha escapado del agarre: soltamos el gesto local
-            draggingStickman = false
-            dragChecked = false
+        .onAppear {
+            tco.peer = victim
+            victim.peer = tco
         }
+        .onChange(of: tco.dragEscapeSignal) { _ in if dragTarget == .chosenOne { dragTarget = nil; dragChecked = false } }
+        .onChange(of: victim.dragEscapeSignal) { _ in if dragTarget == .victim { dragTarget = nil; dragChecked = false } }
     }
 
     // MARK: Barra superior
@@ -70,58 +82,68 @@ struct ContentView: View {
             Circle().fill(Color.red).frame(width: 11, height: 11)
             Circle().fill(Color.yellow).frame(width: 11, height: 11)
             Circle().fill(Color.green).frame(width: 11, height: 11)
-            Text("Animate — stickman_vivo.fla")
+            Text("Animate — tco_y_victim.fla")
                 .font(.subheadline.bold()).foregroundColor(.white)
                 .lineLimit(1)
             Spacer()
-            if controller.isChosenOne {
+            if tco.isChosenOne {
                 Text("⚡ CHOSEN ONE")
                     .font(.caption.bold()).foregroundColor(.black)
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(Color.yellow).cornerRadius(6)
             }
-            Text(controller.isAlive ? controller.emotion.rawValue : "Sin vida")
+            Text(tco.isAlive ? "TCO: \(tco.emotion.rawValue) · V: \(victim.emotion.rawValue)" : "Sin vida")
                 .font(.caption).foregroundColor(.white.opacity(0.85))
+                .lineLimit(1)
             Button(showBrain ? "🧠▲" : "🧠") { showBrain.toggle() }
                 .font(.headline)
-                .accessibilityLabel("Ver su cerebro")
+                .accessibilityLabel("Ver sus cerebros")
         }
         .padding(.horizontal, 10).padding(.vertical, 7)
         .background(Color(red: 0.23, green: 0.23, blue: 0.26))
     }
 
-    // MARK: Panel del cerebro + IA tactil
+    // MARK: Panel de los cerebros + IA tactil (los DOS)
 
     private var brainPanel: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack {
-                Text("🧠 Su cerebro").font(.caption.bold()).foregroundColor(.white)
-                Spacer()
-                if controller.isResting {
-                    Text("Descansando: \(Int(controller.restSecondsLeft)) s").font(.caption).foregroundColor(.cyan)
-                } else {
-                    Text("Descanso en \(Int(controller.secondsUntilRest)) s · Plan: \(controller.currentPlanName)")
-                        .font(.caption).foregroundColor(.white.opacity(0.85)).lineLimit(1)
-                }
-            }
-            driveRow("Energía", controller.drives.energy, .green)
-            driveRow("Curiosidad", controller.drives.curiosity, .blue)
-            driveRow("Ganas de jugar", controller.drives.playfulness, .pink)
-            driveRow("Travesura", controller.drives.mischief, .purple)
-            driveRow("Sociabilidad", controller.drives.sociability, .orange)
-            driveRow("Aburrimiento", controller.drives.boredom, .gray)
-            driveRow("Enfado", controller.drives.anger, .red)
-            driveRow("Acoso (IA)", controller.harassmentLevel, .pink)
-            Text("IA: \(controller.lastDecision) · Velocidad: \(Int(controller.moveSpeed)) pt/s · Ahora: \(controller.microActivity) · Piensa: \(controller.thought.isEmpty ? "—" : controller.thought)")
-                .font(.caption2).foregroundColor(.white.opacity(0.75)).lineLimit(2)
+        HStack(alignment: .top, spacing: 10) {
+            brainColumn(tco, title: "🧠 TCO (negro)")
+            brainColumn(victim, title: "🧠 Victim (gris)")
         }
         .padding(.horizontal, 10).padding(.vertical, 6)
         .background(Color(red: 0.20, green: 0.20, blue: 0.23))
     }
 
+    private func brainColumn(_ c: StickmanController, title: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(title).font(.caption.bold()).foregroundColor(.white)
+                Spacer()
+                if c.isResting {
+                    Text("💤 \(Int(c.restSecondsLeft))s").font(.caption2).foregroundColor(.cyan)
+                } else {
+                    Text("⏳\(Int(c.secondsUntilRest))s").font(.caption2).foregroundColor(.white.opacity(0.8))
+                }
+            }
+            driveRow("Energía", c.drives.energy, .green)
+            driveRow("Curiosid.", c.drives.curiosity, .blue)
+            driveRow("Jugar", c.drives.playfulness, .pink)
+            driveRow("Travesura", c.drives.mischief, .purple)
+            driveRow("Social", c.drives.sociability, .orange)
+            driveRow("Aburrim.", c.drives.boredom, .gray)
+            driveRow("Enfado", c.drives.anger, .red)
+            driveRow("Acoso IA", c.harassmentLevel, .pink)
+            Text("Plan: \(c.currentPlanName) · \(c.microActivity) · \(c.surface.rawValue)")
+                .font(.caption2).foregroundColor(.white.opacity(0.7)).lineLimit(2)
+            Text("IA: \(c.lastDecision)")
+                .font(.caption2).foregroundColor(.white.opacity(0.7)).lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func driveRow(_ label: String, _ value: Double, _ color: Color) -> some View {
-        HStack(spacing: 6) {
-            Text(label).font(.caption2).foregroundColor(.white.opacity(0.8)).frame(width: 92, alignment: .leading)
+        HStack(spacing: 5) {
+            Text(label).font(.caption2).foregroundColor(.white.opacity(0.8)).frame(width: 56, alignment: .leading)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3).fill(Color.white.opacity(0.15))
@@ -130,7 +152,7 @@ struct ContentView: View {
                 }
             }
             .frame(height: 7)
-            Text("\(Int(value))").font(.caption2).foregroundColor(.white.opacity(0.8)).frame(width: 24, alignment: .trailing)
+            Text("\(Int(value))").font(.caption2).foregroundColor(.white.opacity(0.8)).frame(width: 22, alignment: .trailing)
         }
     }
 
@@ -143,20 +165,23 @@ struct ContentView: View {
                 ZStack(alignment: .topLeading) {
                     Rectangle().fill(Color.white)
                     gridOverlay(size: geo.size)
-                    StickmanCanvasView(controller: controller)
-                        .offset(x: controller.shakeAmount > 0 ? CGFloat(sin(controller.phase * 72)) * controller.shakeAmount * 0.35 : 0)
-                    bubble(size: geo.size)
-                    if let cursor = cursorPoint, controller.toolMode == .cursor {
+                    // Victim detras, TCO delante; cada Canvas dibuja lo suyo
+                    StickmanCanvasView(controller: victim)
+                    StickmanCanvasView(controller: tco)
+                        .offset(x: shakeOffset)
+                    bubble(for: victim, size: geo.size)
+                    bubble(for: tco, size: geo.size)
+                    if let cursor = cursorPoint, tco.toolMode == .cursor {
                         Image(systemName: "cursorarrow")
                             .font(.system(size: 34))
                             .foregroundColor(.black)
                             .shadow(radius: 2)
-                            .rotationEffect(.degrees(controller.isGrabbingFinger ? sin(controller.phase * 18) * 14 : 0))
+                            .rotationEffect(.degrees((tco.isGrabbingFinger || victim.isGrabbingFinger) ? sin(tco.phase * 18) * 14 : 0))
                             .position(x: cursor.x, y: cursor.y)
                     }
-                    if !controller.isAlive && !showConsole {
+                    if !tco.isAlive && !showConsole {
                         Button(action: startConsole) {
-                            Text("▶ Darle vida")
+                            Text("▶ Darles vida")
                                 .font(.title3.bold()).foregroundColor(.white)
                                 .padding(.horizontal, 28).padding(.vertical, 15)
                                 .background(Color.orange).cornerRadius(14)
@@ -169,11 +194,17 @@ struct ContentView: View {
                 .contentShape(Rectangle())
                 .gesture(stageGesture(size: geo.size))
                 .onReceive(tickTimer) { _ in
-                    controller.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width)
+                    tco.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width, stageHeight: geo.size.height)
+                    victim.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width, stageHeight: geo.size.height)
                 }
             }
         }
         .frame(maxHeight: .infinity)
+    }
+
+    private var shakeOffset: CGFloat {
+        let s = max(tco.shakeAmount, victim.shakeAmount)
+        return s > 0 ? CGFloat(sin(tco.phase * 72)) * s * 0.35 : 0
     }
 
     private func gridOverlay(size: CGSize) -> some View {
@@ -196,13 +227,12 @@ struct ContentView: View {
             toolButton(mode: .pencil)
             toolButton(mode: .eraser)
             Divider().background(Color.white.opacity(0.25)).padding(.horizontal, 6)
-            actionToolButton(icon: "trash", label: "Borrar todo") { controller.clearAllStrokes() }
-            actionToolButton(icon: "arrow.uturn.backward", label: "Deshacer", disabled: !controller.canUndoStrokes) { controller.undoStrokeAction() }
+            actionToolButton(icon: "trash", label: "Borrar todo") { both.forEach { $0.clearAllStrokes() } }
+            actionToolButton(icon: "arrow.uturn.backward", label: "Deshacer", disabled: !tco.canUndoStrokes) { both.forEach { $0.undoStrokeAction() } }
             Spacer()
-            // Indicador decorativo de la herramienta que EL ha robado alguna vez (sin hit-testing)
             Image(systemName: "paintbrush")
                 .font(.system(size: 15))
-                .foregroundColor(controller.action == .usingTool ? .orange : .white.opacity(0.3))
+                .foregroundColor((tco.action == .usingTool || victim.action == .usingTool) ? .orange : .white.opacity(0.3))
                 .frame(width: 40, height: 30)
         }
         .padding(.top, 10)
@@ -211,9 +241,9 @@ struct ContentView: View {
     }
 
     private func toolButton(mode: ToolMode) -> some View {
-        let active = controller.toolMode == mode
+        let active = tco.toolMode == mode
         return Button {
-            controller.toolMode = mode
+            both.forEach { $0.toolMode = mode }
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: mode.icon).font(.system(size: 20))
@@ -242,26 +272,39 @@ struct ContentView: View {
         .accessibilityLabel(label)
     }
 
-    // MARK: Fila de estado del modo (feedback visible de que el boton funciono)
+    // MARK: Fila de estado del modo
 
     private var modeStatusRow: some View {
         HStack(spacing: 6) {
-            Image(systemName: controller.toolMode.icon).font(.caption.bold())
-            Text(controller.toolMode.hint).font(.caption.bold()).lineLimit(1)
+            Image(systemName: tco.toolMode.icon).font(.caption.bold())
+            Text(tco.toolMode.hint).font(.caption.bold()).lineLimit(1)
             Spacer()
-            if !controller.userStrokes.isEmpty {
-                Text("\(controller.userStrokes.count) trazo(s)").font(.caption2).foregroundColor(.white.opacity(0.7))
+            if !tco.userStrokes.isEmpty {
+                Text("\(tco.userStrokes.count) trazo(s)").font(.caption2).foregroundColor(.white.opacity(0.7))
             }
         }
         .foregroundColor(.white)
         .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(controller.toolMode == .cursor ? Color(red: 0.23, green: 0.23, blue: 0.26) : Color.orange.opacity(0.85))
+        .background(tco.toolMode == .cursor ? Color(red: 0.23, green: 0.23, blue: 0.26) : Color.orange.opacity(0.85))
+    }
+
+    // Posicion en pantalla (para bocadillos y el agarre) segun superficie
+    private func screenPos(of c: StickmanController, size: CGSize) -> CGPoint {
+        let groundY = size.height - 10
+        switch c.surface {
+        case .ceiling: return CGPoint(x: c.x, y: 6)
+        case .wallLeft: return CGPoint(x: 30, y: groundY - c.heightAboveGround)
+        case .wallRight: return CGPoint(x: size.width - 30, y: groundY - c.heightAboveGround)
+        default: return CGPoint(x: c.x, y: groundY - c.platformHeight - c.heightAboveGround)
+        }
     }
 
     @ViewBuilder
-    private func bubble(size: CGSize) -> some View {
-        let text = controller.thought.isEmpty ? controller.action.bubbleText : controller.thought
-        if controller.isAlive && !text.isEmpty {
+    private func bubble(for c: StickmanController, size: CGSize) -> some View {
+        let text = c.thought.isEmpty ? c.action.bubbleText : c.thought
+        if c.isAlive && !text.isEmpty {
+            let pos = screenPos(of: c, size: size)
+            let bubbleY = c.surface == .ceiling ? min(size.height - 40, pos.y + 178) : max(28, pos.y - 188)
             Text(text)
                 .font(.callout.bold())
                 .padding(.horizontal, 10).padding(.vertical, 6)
@@ -269,14 +312,11 @@ struct ContentView: View {
                 .cornerRadius(12)
                 .shadow(radius: 3)
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.black.opacity(0.6), lineWidth: 1))
-                .position(
-                    x: min(max(controller.x, 84), size.width - 84),
-                    y: max(28, size.height - 10 - controller.platformHeight - controller.heightAboveGround - 188)
-                )
+                .position(x: min(max(pos.x, 84), size.width - 84), y: bubbleY)
         }
     }
 
-    // MARK: Consola falsa de "darle vida"
+    // MARK: Consola falsa de "darles vida"
 
     private func startConsole() {
         showConsole = true; consoleCount = 0; consoleFinishedWait = 0
@@ -290,7 +330,8 @@ struct ContentView: View {
             consoleFinishedWait += 0.028
             if consoleFinishedWait > 0.55 {
                 showConsole = false
-                controller.bringToLife()
+                tco.bringToLife()
+                victim.bringToLife()
             }
         }
     }
@@ -314,63 +355,75 @@ struct ContentView: View {
         CGPoint(x: location.x, y: (size.height - 10) - location.y)
     }
 
+    /// El personaje mas cercano al punto de pantalla (para agarrar/tocar).
+    private func nearestController(toScreenPoint p: CGPoint, size: CGSize) -> StickmanController {
+        func d(_ c: StickmanController) -> CGFloat {
+            let pos = screenPos(of: c, size: size)
+            let body = CGPoint(x: pos.x, y: pos.y - 70)
+            return hypot(p.x - body.x, p.y - body.y)
+        }
+        return d(tco) <= d(victim) ? tco : victim
+    }
+
     private func stageGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 let world = worldPoint(value.location, size: size)
-                switch controller.toolMode {
+                switch tco.toolMode {
                 case .pencil:
                     if !strokeStarted {
                         strokeStarted = true
-                        controller.beginUserStroke(at: world)
+                        both.forEach { $0.beginUserStroke(at: world) }
                     } else {
-                        controller.appendUserStrokePoint(world)
+                        both.forEach { $0.appendUserStrokePoint(world) }
                     }
                 case .eraser:
-                    controller.eraseAt(world)
+                    both.forEach { $0.eraseAt(world) }
                 case .cursor:
                     cursorPoint = value.location
-                    controller.fingerMoved(toWorldPoint: world)
+                    both.forEach { $0.fingerMoved(toWorldPoint: world) }
                     if !dragChecked {
                         dragChecked = true
-                        let stickmanY = size.height - 10 - controller.platformHeight - controller.heightAboveGround - 70
-                        let dx = value.location.x - controller.x
-                        let dy = value.location.y - stickmanY
-                        if dx * dx + dy * dy < 92 * 92 && controller.isAlive {
-                            draggingStickman = true
-                            controller.beginDrag()
+                        let near = nearestController(toScreenPoint: value.location, size: size)
+                        let pos = screenPos(of: near, size: size)
+                        let dx = value.location.x - pos.x
+                        let dy = value.location.y - (pos.y - 70)
+                        if dx * dx + dy * dy < 92 * 92 && near.isAlive {
+                            dragTarget = near.kind
+                            near.beginDrag()
                         }
                     }
-                    if draggingStickman {
+                    if let kind = dragTarget {
+                        let target = controller(for: kind)
                         let groundY = size.height - 10
-                        let above = groundY - (value.location.y + 42) - controller.platformHeight
-                        controller.drag(to: value.location.x, aboveGround: above)
+                        let above = groundY - (value.location.y + 42) - target.platformHeight
+                        target.drag(to: value.location.x, aboveGround: above)
                     }
                 }
             }
             .onEnded { value in
                 let world = worldPoint(value.location, size: size)
-                switch controller.toolMode {
+                switch tco.toolMode {
                 case .pencil:
-                    controller.appendUserStrokePoint(world)
-                    controller.finishUserStroke()
+                    both.forEach { $0.appendUserStrokePoint(world); $0.finishUserStroke() }
                     strokeStarted = false
                 case .eraser:
-                    controller.eraseAt(world)
+                    both.forEach { $0.eraseAt(world) }
                 case .cursor:
                     cursorPoint = value.location
-                    if draggingStickman {
+                    if let kind = dragTarget {
                         let vx = (value.predictedEndTranslation.width - value.translation.width) * 3.2
                         let vy = (value.predictedEndTranslation.height - value.translation.height) * 3.2
-                        controller.endDrag(velocity: CGSize(width: vx, height: vy))
+                        controller(for: kind).endDrag(velocity: CGSize(width: vx, height: vy))
                     } else if abs(value.translation.width) < 10 && abs(value.translation.height) < 10 {
                         let tapSpeed = hypot(value.predictedEndTranslation.width - value.translation.width,
                                              value.predictedEndTranslation.height - value.translation.height) * 3.2
-                        controller.reactToTap(atWorldX: value.location.x, fingerSpeed: tapSpeed)
+                        nearestController(toScreenPoint: value.location, size: size)
+                            .reactToTap(atWorldX: value.location.x, fingerSpeed: tapSpeed)
                     }
-                    controller.fingerReleased()
+                    both.forEach { $0.fingerReleased() }
                 }
-                draggingStickman = false
+                dragTarget = nil
                 dragChecked = false
             }
     }
@@ -381,7 +434,7 @@ struct ContentView: View {
         HStack(spacing: 2) {
             ForEach(0..<28, id: \.self) { frame in
                 Rectangle()
-                    .fill(frame == Int(controller.phase * 12) % 28 ? Color.red : (frame % 5 == 0 ? Color.white.opacity(0.55) : Color.white.opacity(0.22)))
+                    .fill(frame == Int(tco.phase * 12) % 28 ? Color.red : (frame % 5 == 0 ? Color.white.opacity(0.55) : Color.white.opacity(0.22)))
                     .frame(height: 18)
             }
         }
@@ -394,13 +447,14 @@ struct ContentView: View {
     private var suggestionBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 9) {
-                suggestionButton("👋 Saludar") { controller.suggest(.waving) }
-                suggestionButton("🕺 Bailar") { controller.suggest(.dancing) }
-                suggestionButton("⤴️ Saltar") { controller.jump() }
-                suggestionButton("⚔️ Espada") { controller.suggest(.sword) }
-                suggestionButton("🪑 Sentarse") { controller.suggest(.sitting) }
-                suggestionButton("💤 Dormir") { controller.suggestSleep() }
-                suggestionButton("⚡ Chosen One") { controller.suggestChosenOne() }
+                suggestionButton("👋 Saludar") { both.forEach { $0.suggest(.waving) } }
+                suggestionButton("🕺 Bailar") { both.forEach { $0.suggest(.dancing) } }
+                suggestionButton("⤴️ Saltar") { both.forEach { $0.jump() } }
+                suggestionButton("⚔️ TCO: espada") { tco.suggest(.sword) }
+                suggestionButton("🪢 Victim: lazo") { victim.suggestVictimSpecial() }
+                suggestionButton("🪑 Sentarse") { both.forEach { $0.suggest(.sitting) } }
+                suggestionButton("💤 Dormir") { both.forEach { $0.suggestSleep() } }
+                suggestionButton("⚡ Chosen One") { tco.suggestChosenOne() }
             }
             .padding(.horizontal, 10).padding(.vertical, 8)
         }
@@ -412,9 +466,9 @@ struct ContentView: View {
             Text(title)
                 .font(.callout.bold()).foregroundColor(.white)
                 .padding(.horizontal, 15).padding(.vertical, 12)
-                .background(controller.isAlive ? Color.orange : Color.gray)
+                .background(tco.isAlive ? Color.orange : Color.gray)
                 .cornerRadius(12)
         }
-        .disabled(!controller.isAlive)
+        .disabled(!tco.isAlive)
     }
 }

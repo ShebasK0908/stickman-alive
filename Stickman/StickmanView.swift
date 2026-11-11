@@ -1,14 +1,22 @@
 import SwiftUI
 
-// MARK: - Dibujo procedural del stickman (Canvas, sin assets) — v2
-// Cabeza hueca naranja como The Second Coming. La pose ya NO se calcula
-// con senos por accion: se MUESTREA de los clips de keyframes de
-// StickmanAnimation.swift (con blend caminar<->correr segun velocidad).
+// MARK: - Dibujo procedural del stickman (Canvas, sin assets) — v3
+// La pose se MUESTREA de los clips de keyframes de StickmanAnimation.swift
+// (con blend caminar<->correr segun velocidad).
+//
+// v3: DOS personajes (cada Canvas dibuja el suyo, con SU color):
+// The Chosen One (negro) y Victim (gris). Roaming 360: en el TECHO el
+// cuerpo se dibuja INVERTIDO (ancla en el borde superior, balanceo
+// swing) y en las PAREDES trepa/colgado junto al borde. El lazo de
+// Victim y su "cursor" vengado se dibujan aqui tambien.
 
 struct StickmanCanvasView: View {
     @ObservedObject var controller: StickmanController
 
-    private let orange = Color(red: 1.0, green: 0.45, blue: 0.0)
+    private var bodyColor: Color {
+        let rgb = controller.kind.colorRGB
+        return Color(red: rgb.r, green: rgb.g, blue: rgb.b)
+    }
 
     var body: some View {
         Canvas { context, size in
@@ -17,13 +25,35 @@ struct StickmanCanvasView: View {
         .allowsHitTesting(false)   // los toques los gestiona SOLO el gesto del lienzo en ContentView
     }
 
+    // MARK: Posicion en pantalla segun la superficie
+
+    /// x del personaje (en pared, pegado al borde; si no, su x).
+    private func screenX(size: CGSize) -> CGFloat {
+        switch controller.surface {
+        case .wallLeft: return 30
+        case .wallRight: return size.width - 30
+        default: return controller.x
+        }
+    }
+    /// Linea de "suelo" (pies) en coordenadas de pantalla.
+    /// En el techo es el borde superior y el cuerpo cuelga INVERTIDO.
+    private func feetY(size: CGSize) -> CGFloat {
+        let groundY = size.height - 10
+        switch controller.surface {
+        case .ceiling: return 6
+        case .wallLeft, .wallRight: return groundY - controller.heightAboveGround
+        default: return groundY - controller.platformHeight - controller.heightAboveGround
+        }
+    }
+    private var isFlipped: Bool { controller.surface == .ceiling }
+
     // MARK: Escena completa
 
     private func drawScene(context: inout GraphicsContext, size: CGSize) {
         let groundY = size.height - 10
         let c = controller
-        let effectiveGround = groundY - c.platformHeight - c.heightAboveGround
-        let cx = c.x
+        let cx = screenX(size: size)
+        let effectiveGround = feetY(size: size)
 
         drawPlatforms(context: &context, size: size, groundY: groundY)
         if let frozenX = c.frozenPatchX { drawFrozenPatch(context: &context, x: frozenX, groundY: groundY) }
@@ -32,7 +62,7 @@ struct StickmanCanvasView: View {
             drawObject(context: &context, object: object, groundY: groundY, stickmanX: cx, effectiveGround: effectiveGround)
         }
 
-        // Aura del Modo Chosen One
+        // Aura del Modo Chosen One (solo TCO puede tenerla)
         if c.isChosenOne {
             var aura = context
             aura.opacity = 0.16 + 0.07 * sin(c.phase * 6)
@@ -61,6 +91,10 @@ struct StickmanCanvasView: View {
             }
         }
         drawParticles(context: &context, groundY: groundY)
+        // Guias visuales de superficies: techo y paredes tenues
+        var guides = Path()
+        guides.move(to: CGPoint(x: 0, y: 6)); guides.addLine(to: CGPoint(x: size.width, y: 6))
+        context.stroke(guides, with: .color(.gray.opacity(0.30)), style: StrokeStyle(lineWidth: 2, dash: [3, 5]))
         // Suelo
         var floor = Path(); floor.move(to: CGPoint(x: 0, y: groundY)); floor.addLine(to: CGPoint(x: size.width, y: groundY))
         context.stroke(floor, with: .color(.gray.opacity(0.5)), lineWidth: 2)
@@ -275,19 +309,28 @@ struct StickmanCanvasView: View {
 
     private func currentPose() -> SkeletonPose {
         let c = controller
+        // Superficies primero: la pose manda el ancla
+        if c.surface == .ceiling {
+            if c.action == .hangingCeiling { return AnimationLibrary.hangCeil.sample(at: c.animTime) }
+            return AnimationLibrary.swingCeil.sample(at: c.gaitPhase01 * AnimationLibrary.swingCeil.duration)
+        }
+        if c.surface.isWall {
+            if c.action == .hangingWall { return AnimationLibrary.hangWall.sample(at: c.animTime) }
+            if c.action == .wallClimbing { return AnimationLibrary.climb.sample(at: c.gaitPhase01 * AnimationLibrary.climb.duration * 1.4) }
+        }
         if c.isSkidding { return AnimationLibrary.skid.sample(at: c.skidElapsed) }
         if c.isTurning && [.walking, .running, .fleeing].contains(c.action) {
             return AnimationLibrary.turn.sample(at: c.turnElapsed)
         }
         if c.isWallSliding { return AnimationLibrary.wallSlide.sample(at: min(c.animTime, 0.6)) }
         if c.isJumpWindingUp { return AnimationLibrary.jumpCrouch.sample(at: c.animTime) }
-        if (c.action == .jumping || c.action == .thrown) && c.isAirborne {
+        if (c.action == .jumping || c.action == .thrown || c.action == .dropping) && c.isAirborne {
             if c.action == .thrown { return AnimationLibrary.thrownSpin.sample(at: c.animTime) }
             if c.velocityY > 80 { return AnimationLibrary.jumpStretch.sample(at: min(c.animTime, 0.3)) }
             return AnimationLibrary.fallPose.sample(at: c.animTime)
         }
         switch c.action {
-        case .walking, .running, .fleeing, .playingBall:
+        case .walking, .running, .fleeing, .playingBall, .chasingPeer, .chasingFinger:
             // Blend caminar<->correr por velocidad REAL, fase de zancada ligada a la velocidad
             let walkPose = AnimationLibrary.walk.sample(at: c.gaitPhase01 * AnimationLibrary.walk.duration)
             let runPose = AnimationLibrary.run.sample(at: c.gaitPhase01 * AnimationLibrary.run.duration)
@@ -297,6 +340,14 @@ struct StickmanCanvasView: View {
         case .usingPower:
             if let power = c.activePower { return AnimationLibrary.clip(forPower: power).sample(at: c.animTime) }
             return AnimationLibrary.powerPose.sample(at: c.animTime)
+        case .grabbed, .escaping:
+            // v3 pose pinch: se estira/inclina hacia el lado del tiron (spec: 7 variantes)
+            var pose = AnimationLibrary.clip(for: c.action).sample(at: c.animTime)
+            pose.hipDX += c.pinchLean * 7
+            pose.headOff.x += c.pinchLean * 5
+            pose.handL.x += c.pinchLean * 6
+            pose.handR.x += c.pinchLean * 6
+            return pose
         case .idle:
             if c.microActivity == "se rasca la cabeza" { return AnimationLibrary.scratchHead.sample(at: c.animTime) }
             if c.microActivity == "mira a un lado" { return AnimationLibrary.lookAround.sample(at: c.animTime) }
@@ -310,17 +361,29 @@ struct StickmanCanvasView: View {
         let c = controller
         let pose = currentPose()
         let f = c.facing
+        let flip = isFlipped
+        // Normal: pose calculada sobre la linea de pies `g0`.
+        // Techo (flip): se calcula con suelo 0 y cada punto se REFLEJA
+        // (y' = ancla - y): los pies quedan en el ancla y la cabeza abajo.
+        let g0: CGFloat = flip ? 0 : ground
         func fromHip(_ p: CGPoint, hip: CGPoint) -> CGPoint { CGPoint(x: hip.x + p.x * f, y: hip.y + p.y) }
         func fromNeck(_ p: CGPoint, neck: CGPoint) -> CGPoint { CGPoint(x: neck.x + p.x * f, y: neck.y + p.y) }
-        let hip = CGPoint(x: cx + pose.hipDX * f, y: ground - pose.hipHeight)
-        let neck = fromHip(pose.neckOff, hip: hip)
-        let head = fromNeck(pose.headOff, neck: neck)
-        return JointPoints(
-            hip: hip, neck: neck, head: head,
-            elbowL: fromNeck(pose.elbowL, neck: neck), handL: fromNeck(pose.handL, neck: neck),
-            elbowR: fromNeck(pose.elbowR, neck: neck), handR: fromNeck(pose.handR, neck: neck),
-            kneeL: fromHip(pose.kneeL, hip: hip), footL: fromHip(pose.footL, hip: hip),
-            kneeR: fromHip(pose.kneeR, hip: hip), footR: fromHip(pose.footR, hip: hip))
+        let hip0 = CGPoint(x: cx + pose.hipDX * f, y: g0 - pose.hipHeight)
+        let neck0 = fromHip(pose.neckOff, hip: hip0)
+        let head0 = fromNeck(pose.headOff, neck: neck0)
+        var j = JointPoints(
+            hip: hip0, neck: neck0, head: head0,
+            elbowL: fromNeck(pose.elbowL, neck: neck0), handL: fromNeck(pose.handL, neck: neck0),
+            elbowR: fromNeck(pose.elbowR, neck: neck0), handR: fromNeck(pose.handR, neck: neck0),
+            kneeL: fromHip(pose.kneeL, hip: hip0), footL: fromHip(pose.footL, hip: hip0),
+            kneeR: fromHip(pose.kneeR, hip: hip0), footR: fromHip(pose.footR, hip: hip0))
+        if flip {
+            func m(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x, y: ground - p.y) }
+            j = JointPoints(hip: m(j.hip), neck: m(j.neck), head: m(j.head),
+                            elbowL: m(j.elbowL), handL: m(j.handL), elbowR: m(j.elbowR), handR: m(j.handR),
+                            kneeL: m(j.kneeL), footL: m(j.footL), kneeR: m(j.kneeR), footR: m(j.footR))
+        }
+        return j
     }
 
     private func drawStickman(context: inout GraphicsContext, cx: CGFloat, ground: CGFloat, size: CGSize, opacity: Double) {
@@ -329,7 +392,8 @@ struct StickmanCanvasView: View {
         var ctx = context; ctx.opacity = opacity
         let j = jointPoints(cx: cx, ground: ground)
         let pose = currentPose()
-        let color: Color = c.action == .drawn ? .gray : orange
+        let color: Color = c.action == .drawn ? .gray : bodyColor
+        let lw = c.kind.lineWidth
 
         var body = Path()
         body.move(to: j.hip); body.addLine(to: j.neck)
@@ -337,13 +401,39 @@ struct StickmanCanvasView: View {
         body.move(to: j.hip); body.addLine(to: j.kneeR); body.addLine(to: j.footR)
         body.move(to: j.neck); body.addLine(to: j.elbowL); body.addLine(to: j.handL)
         body.move(to: j.neck); body.addLine(to: j.elbowR); body.addLine(to: j.handR)
-        ctx.stroke(body, with: .color(color), style: StrokeStyle(lineWidth: 5.5, lineCap: .round, lineJoin: .round))
+        ctx.stroke(body, with: .color(color), style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
 
         // Cabeza HUECA (con squash vertical del clip)
         let headH = 40 * pose.squash
         let headW = 40 * (1 + (1 - pose.squash) * 0.55)
         ctx.stroke(Path(ellipseIn: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH)),
-                   with: .color(color), lineWidth: 5.5)
+                   with: .color(color), lineWidth: lw)
+
+        // v3 Victim: el LAZO girando sobre su cabeza (SpinLasso)
+        if c.action == .lassoSpin {
+            let r = 26 + CGFloat(sin(c.phase * 9)) * 4
+            var lasso = Path()
+            lasso.addEllipse(in: CGRect(x: j.handR.x - r, y: j.handR.y - 10, width: r * 2, height: 17))
+            ctx.stroke(lasso, with: .color(Color(red: 0.6, green: 0.45, blue: 0.25)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            var rope = Path(); rope.move(to: j.handR); rope.addLine(to: CGPoint(x: j.handR.x + r * 0.4, y: j.handR.y - 8))
+            ctx.stroke(rope, with: .color(Color(red: 0.6, green: 0.45, blue: 0.25)), lineWidth: 3)
+        }
+        // v3 Victim: "su" cursor colocado junto a el (CursorSetup / Stabbing)
+        if c.action == .cursorSetup || c.action == .stabbing {
+            let cur = CGPoint(x: cx + f * 56, y: ground - 96)
+            ctx.draw(Text("➤").font(.system(size: 30)).foregroundColor(.black), at: cur)
+            if c.action == .stabbing {
+                // La herramienta con la que apuñala
+                var knife = Path(); knife.move(to: j.handR); knife.addLine(to: CGPoint(x: j.handR.x + f * 17, y: j.handR.y + 8))
+                ctx.stroke(knife, with: .color(.gray), lineWidth: 3.5)
+            }
+        }
+        // v3 Victim trabajando: papel sobre la mesa que pica sin parar
+        if c.action == .working {
+            var paper = Path()
+            paper.addRect(CGRect(x: cx + f * 18 - 13, y: ground - 34, width: 26, height: 18))
+            ctx.stroke(paper, with: .color(.gray), lineWidth: 2)
+        }
 
         // Herramientas/objetos EN LA MANO segun la accion
         let hand = j.handR
