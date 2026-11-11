@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Escena: un programa de animacion falso tipo Adobe Animate
-// Los stickmen viven AHI dentro: lienzo, toolbar, timeline y botones son su mundo.
+// The Chosen One vive AHI dentro: lienzo, toolbar, timeline y botones son su mundo.
 //
 // v2 — POR QUE LA TOOLBAR DE LA v1 NO RESPONDIA (diagnostico):
 //  1) Era un VStack de Image(systemName:) SIN botones: puro dibujo.
@@ -14,24 +14,19 @@ import SwiftUI
 // RAMIFICA por el modo activo: cursor = agarrar/tocar, lapiz = trazo,
 // goma = borrar.
 //
-// v3: DOS personajes en escena — The Chosen One (negro, poderes) y
-// Victim (gris, lazo/cursor/trabajo) — cada uno con su controlador y su
-// cerebro. Comparten los trazos del usuario (toda operacion de trazo se
-// aplica a AMBOS controladores, que mantienen copias identicas) y cada
-// uno dibuja sus propios objetos/criaturas en su Canvas. El gesto de
-// arrastre agarra al personaje MAS CERCANO al dedo; el toque reacciona
-// en el mas cercano; la percepcion del dedo llega a los dos.
+// v4: UN solo personaje en escena — The Chosen One (negro, poderes) —
+// con su controlador y su cerebro. El gesto de arrastre lo agarra a el;
+// el toque reacciona en el; los trazos del usuario son suyos.
 
 struct ContentView: View {
     @StateObject private var tco = StickmanController(kind: .chosenOne)
-    @StateObject private var victim = StickmanController(kind: .victim)
 
     @State private var showBrain = false
     @State private var showConsole = false
     @State private var consoleCount = 0
     @State private var consoleFinishedWait = 0.0
     @State private var cursorPoint: CGPoint? = nil
-    @State private var dragTarget: CharacterKind? = nil
+    @State private var isDraggingHim = false
     @State private var dragChecked = false
     @State private var strokeStarted = false
 
@@ -42,13 +37,9 @@ struct ContentView: View {
     $ python3 bring_to_life.py
     import stickman
     tco = dibujar(color = "negro")   # The Chosen One
-    victim = dibujar(color = "gris") # el de AvA 1...
-    tco.awake(); victim.awake()   # esto es broma, como en el video ;)
-    > DESPERTANDO A LOS DOS...
+    tco.awake()   # esto es broma, como en el video ;)
+    > DESPERTANDO A THE CHOSEN ONE...
     """
-
-    private var both: [StickmanController] { [tco, victim] }
-    private func controller(for kind: CharacterKind) -> StickmanController { kind == .chosenOne ? tco : victim }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -58,7 +49,7 @@ struct ContentView: View {
             modeStatusRow
             timeline
             suggestionBar
-            Text("Las órdenes son sugerencias: tienen su propio cerebro, roaming 360° e IA para defenderse de tu dedo.")
+            Text("Las órdenes son sugerencias: tiene su propio cerebro, roaming 360° e IA para defenderse de tu dedo.")
                 .font(.caption2)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -67,12 +58,7 @@ struct ContentView: View {
         }
         .background(Color(red: 0.16, green: 0.16, blue: 0.18))
         .onReceive(consoleTimer) { _ in typeConsole() }
-        .onAppear {
-            tco.peer = victim
-            victim.peer = tco
-        }
-        .onChange(of: tco.dragEscapeSignal) { _ in if dragTarget == .chosenOne { dragTarget = nil; dragChecked = false } }
-        .onChange(of: victim.dragEscapeSignal) { _ in if dragTarget == .victim { dragTarget = nil; dragChecked = false } }
+        .onChange(of: tco.dragEscapeSignal) { _ in if isDraggingHim { isDraggingHim = false; dragChecked = false } }
     }
 
     // MARK: Barra superior
@@ -82,7 +68,7 @@ struct ContentView: View {
             Circle().fill(Color.red).frame(width: 11, height: 11)
             Circle().fill(Color.yellow).frame(width: 11, height: 11)
             Circle().fill(Color.green).frame(width: 11, height: 11)
-            Text("Animate — tco_y_victim.fla")
+            Text("Animate — the_chosen_one.fla")
                 .font(.subheadline.bold()).foregroundColor(.white)
                 .lineLimit(1)
             Spacer()
@@ -92,26 +78,23 @@ struct ContentView: View {
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(Color.yellow).cornerRadius(6)
             }
-            Text(tco.isAlive ? "TCO: \(tco.emotion.rawValue) · V: \(victim.emotion.rawValue)" : "Sin vida")
+            Text(tco.isAlive ? "TCO: \(tco.emotion.rawValue)" : "Sin vida")
                 .font(.caption).foregroundColor(.white.opacity(0.85))
                 .lineLimit(1)
             Button(showBrain ? "🧠▲" : "🧠") { showBrain.toggle() }
                 .font(.headline)
-                .accessibilityLabel("Ver sus cerebros")
+                .accessibilityLabel("Ver su cerebro")
         }
         .padding(.horizontal, 10).padding(.vertical, 7)
         .background(Color(red: 0.23, green: 0.23, blue: 0.26))
     }
 
-    // MARK: Panel de los cerebros + IA tactil (los DOS)
+    // MARK: Panel del cerebro + IA tactil
 
     private var brainPanel: some View {
-        HStack(alignment: .top, spacing: 10) {
-            brainColumn(tco, title: "🧠 TCO (negro)")
-            brainColumn(victim, title: "🧠 Victim (gris)")
-        }
-        .padding(.horizontal, 10).padding(.vertical, 6)
-        .background(Color(red: 0.20, green: 0.20, blue: 0.23))
+        brainColumn(tco, title: "🧠 The Chosen One (negro)")
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Color(red: 0.20, green: 0.20, blue: 0.23))
     }
 
     private func brainColumn(_ c: StickmanController, title: String) -> some View {
@@ -165,23 +148,20 @@ struct ContentView: View {
                 ZStack(alignment: .topLeading) {
                     Rectangle().fill(Color.white)
                     gridOverlay(size: geo.size)
-                    // Victim detras, TCO delante; cada Canvas dibuja lo suyo
-                    StickmanCanvasView(controller: victim)
                     StickmanCanvasView(controller: tco)
                         .offset(x: shakeOffset)
-                    bubble(for: victim, size: geo.size)
                     bubble(for: tco, size: geo.size)
                     if let cursor = cursorPoint, tco.toolMode == .cursor {
                         Image(systemName: "cursorarrow")
                             .font(.system(size: 34))
                             .foregroundColor(.black)
                             .shadow(radius: 2)
-                            .rotationEffect(.degrees((tco.isGrabbingFinger || victim.isGrabbingFinger) ? sin(tco.phase * 18) * 14 : 0))
+                            .rotationEffect(.degrees(tco.isGrabbingFinger ? sin(tco.phase * 18) * 14 : 0))
                             .position(x: cursor.x, y: cursor.y)
                     }
                     if !tco.isAlive && !showConsole {
                         Button(action: startConsole) {
-                            Text("▶ Darles vida")
+                            Text("▶ Darle vida")
                                 .font(.title3.bold()).foregroundColor(.white)
                                 .padding(.horizontal, 28).padding(.vertical, 15)
                                 .background(Color.orange).cornerRadius(14)
@@ -195,7 +175,6 @@ struct ContentView: View {
                 .gesture(stageGesture(size: geo.size))
                 .onReceive(tickTimer) { _ in
                     tco.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width, stageHeight: geo.size.height)
-                    victim.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width, stageHeight: geo.size.height)
                 }
             }
         }
@@ -203,8 +182,7 @@ struct ContentView: View {
     }
 
     private var shakeOffset: CGFloat {
-        let s = max(tco.shakeAmount, victim.shakeAmount)
-        return s > 0 ? CGFloat(sin(tco.phase * 72)) * s * 0.35 : 0
+        tco.shakeAmount > 0 ? CGFloat(sin(tco.phase * 72)) * tco.shakeAmount * 0.35 : 0
     }
 
     private func gridOverlay(size: CGSize) -> some View {
@@ -227,12 +205,12 @@ struct ContentView: View {
             toolButton(mode: .pencil)
             toolButton(mode: .eraser)
             Divider().background(Color.white.opacity(0.25)).padding(.horizontal, 6)
-            actionToolButton(icon: "trash", label: "Borrar todo") { both.forEach { $0.clearAllStrokes() } }
-            actionToolButton(icon: "arrow.uturn.backward", label: "Deshacer", disabled: !tco.canUndoStrokes) { both.forEach { $0.undoStrokeAction() } }
+            actionToolButton(icon: "trash", label: "Borrar todo") { tco.clearAllStrokes() }
+            actionToolButton(icon: "arrow.uturn.backward", label: "Deshacer", disabled: !tco.canUndoStrokes) { tco.undoStrokeAction() }
             Spacer()
             Image(systemName: "paintbrush")
                 .font(.system(size: 15))
-                .foregroundColor((tco.action == .usingTool || victim.action == .usingTool) ? .orange : .white.opacity(0.3))
+                .foregroundColor(tco.action == .usingTool ? .orange : .white.opacity(0.3))
                 .frame(width: 40, height: 30)
         }
         .padding(.top, 10)
@@ -243,7 +221,7 @@ struct ContentView: View {
     private func toolButton(mode: ToolMode) -> some View {
         let active = tco.toolMode == mode
         return Button {
-            both.forEach { $0.toolMode = mode }
+            tco.toolMode = mode
         } label: {
             VStack(spacing: 2) {
                 Image(systemName: mode.icon).font(.system(size: 20))
@@ -316,7 +294,7 @@ struct ContentView: View {
         }
     }
 
-    // MARK: Consola falsa de "darles vida"
+    // MARK: Consola falsa de "darle vida"
 
     private func startConsole() {
         showConsole = true; consoleCount = 0; consoleFinishedWait = 0
@@ -331,7 +309,6 @@ struct ContentView: View {
             if consoleFinishedWait > 0.55 {
                 showConsole = false
                 tco.bringToLife()
-                victim.bringToLife()
             }
         }
     }
@@ -355,16 +332,6 @@ struct ContentView: View {
         CGPoint(x: location.x, y: (size.height - 10) - location.y)
     }
 
-    /// El personaje mas cercano al punto de pantalla (para agarrar/tocar).
-    private func nearestController(toScreenPoint p: CGPoint, size: CGSize) -> StickmanController {
-        func d(_ c: StickmanController) -> CGFloat {
-            let pos = screenPos(of: c, size: size)
-            let body = CGPoint(x: pos.x, y: pos.y - 70)
-            return hypot(p.x - body.x, p.y - body.y)
-        }
-        return d(tco) <= d(victim) ? tco : victim
-    }
-
     private func stageGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
@@ -373,31 +340,29 @@ struct ContentView: View {
                 case .pencil:
                     if !strokeStarted {
                         strokeStarted = true
-                        both.forEach { $0.beginUserStroke(at: world) }
+                        tco.beginUserStroke(at: world)
                     } else {
-                        both.forEach { $0.appendUserStrokePoint(world) }
+                        tco.appendUserStrokePoint(world)
                     }
                 case .eraser:
-                    both.forEach { $0.eraseAt(world) }
+                    tco.eraseAt(world)
                 case .cursor:
                     cursorPoint = value.location
-                    both.forEach { $0.fingerMoved(toWorldPoint: world) }
+                    tco.fingerMoved(toWorldPoint: world)
                     if !dragChecked {
                         dragChecked = true
-                        let near = nearestController(toScreenPoint: value.location, size: size)
-                        let pos = screenPos(of: near, size: size)
+                        let pos = screenPos(of: tco, size: size)
                         let dx = value.location.x - pos.x
                         let dy = value.location.y - (pos.y - 70)
-                        if dx * dx + dy * dy < 92 * 92 && near.isAlive {
-                            dragTarget = near.kind
-                            near.beginDrag()
+                        if dx * dx + dy * dy < 92 * 92 && tco.isAlive {
+                            isDraggingHim = true
+                            tco.beginDrag()
                         }
                     }
-                    if let kind = dragTarget {
-                        let target = controller(for: kind)
+                    if isDraggingHim {
                         let groundY = size.height - 10
-                        let above = groundY - (value.location.y + 42) - target.platformHeight
-                        target.drag(to: value.location.x, aboveGround: above)
+                        let above = groundY - (value.location.y + 42) - tco.platformHeight
+                        tco.drag(to: value.location.x, aboveGround: above)
                     }
                 }
             }
@@ -405,25 +370,24 @@ struct ContentView: View {
                 let world = worldPoint(value.location, size: size)
                 switch tco.toolMode {
                 case .pencil:
-                    both.forEach { $0.appendUserStrokePoint(world); $0.finishUserStroke() }
+                    tco.appendUserStrokePoint(world); tco.finishUserStroke()
                     strokeStarted = false
                 case .eraser:
-                    both.forEach { $0.eraseAt(world) }
+                    tco.eraseAt(world)
                 case .cursor:
                     cursorPoint = value.location
-                    if let kind = dragTarget {
+                    if isDraggingHim {
                         let vx = (value.predictedEndTranslation.width - value.translation.width) * 3.2
                         let vy = (value.predictedEndTranslation.height - value.translation.height) * 3.2
-                        controller(for: kind).endDrag(velocity: CGSize(width: vx, height: vy))
+                        tco.endDrag(velocity: CGSize(width: vx, height: vy))
                     } else if abs(value.translation.width) < 10 && abs(value.translation.height) < 10 {
                         let tapSpeed = hypot(value.predictedEndTranslation.width - value.translation.width,
                                              value.predictedEndTranslation.height - value.translation.height) * 3.2
-                        nearestController(toScreenPoint: value.location, size: size)
-                            .reactToTap(atWorldX: value.location.x, fingerSpeed: tapSpeed)
+                        tco.reactToTap(atWorldX: value.location.x, fingerSpeed: tapSpeed)
                     }
-                    both.forEach { $0.fingerReleased() }
+                    tco.fingerReleased()
                 }
-                dragTarget = nil
+                isDraggingHim = false
                 dragChecked = false
             }
     }
@@ -447,13 +411,12 @@ struct ContentView: View {
     private var suggestionBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 9) {
-                suggestionButton("👋 Saludar") { both.forEach { $0.suggest(.waving) } }
-                suggestionButton("🕺 Bailar") { both.forEach { $0.suggest(.dancing) } }
-                suggestionButton("⤴️ Saltar") { both.forEach { $0.jump() } }
-                suggestionButton("⚔️ TCO: espada") { tco.suggest(.sword) }
-                suggestionButton("🪢 Victim: lazo") { victim.suggestVictimSpecial() }
-                suggestionButton("🪑 Sentarse") { both.forEach { $0.suggest(.sitting) } }
-                suggestionButton("💤 Dormir") { both.forEach { $0.suggestSleep() } }
+                suggestionButton("👋 Saludar") { tco.suggest(.waving) }
+                suggestionButton("🕺 Bailar") { tco.suggest(.dancing) }
+                suggestionButton("⤴️ Saltar") { tco.jump() }
+                suggestionButton("⚔️ Espada") { tco.suggest(.sword) }
+                suggestionButton("🪑 Sentarse") { tco.suggest(.sitting) }
+                suggestionButton("💤 Dormir") { tco.suggestSleep() }
                 suggestionButton("⚡ Chosen One") { tco.suggestChosenOne() }
             }
             .padding(.horizontal, 10).padding(.vertical, 8)

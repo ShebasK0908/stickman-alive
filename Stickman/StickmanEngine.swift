@@ -36,19 +36,12 @@ enum StickmanAction: String, CaseIterable {
     case bouncing      // Botar al levantarse (Bounce)
     case lyingDown     // Tumbado despierto (LieDown)
     case dropping      // Descolgarse / soltarse (FallFromWall / FallFromCeiling)
-    // v3 — social y dedo
-    case chasingPeer   // Perseguir al OTRO personaje
+    // v3 — dedo (se mantiene en la v4)
     case chasingFinger // Perseguir el dedo del usuario (ChaseMouse)
-    case sparring      // Pelea de broma con el otro
-    case hugging       // Abrazo, rol que abraza (HuggingSolid)
-    case hugged        // Abrazo, rol abrazado (HuggedSolid)
-    case hugOffer      // Ofrecerse para un abrazo (HugAffordance)
     case sittingFacingFinger // Sentado mirando al dedo (SitAndFaceMouse)
-    // v3 — unicos de Victim (AvA 1)
-    case lassoSpin     // Girar el lazo (SpinLasso)
-    case stabbing      // Apuñalar el cursor (Stabbing)
-    case cursorSetup   // Posar junto a su cursor (CursorSetup)
-    case working       // Sentado «a trabajar» (SitWhileWorking)
+    // v4: salen las acciones sociales del duo (chasingPeer, sparring,
+    // hugging, hugged, hugOffer) y los unicos de Victim (lassoSpin,
+    // stabbing, cursorSetup, working): la app es de UN personaje.
 
     var bubbleText: String {
         switch self {
@@ -105,17 +98,8 @@ enum StickmanAction: String, CaseIterable {
         case .bouncing: return "¡boing!"
         case .lyingDown: return ""
         case .dropping: return "¡me suelto!"
-        case .chasingPeer: return "¡ven aquí!"
         case .chasingFinger: return "¡ese dedo es mío!"
-        case .sparring: return "¡toma! ¡de broma!"
-        case .hugging: return "¡abrazo!"
-        case .hugged: return "eh... vale"
-        case .hugOffer: return "¿un abrazo?"
         case .sittingFacingFinger: return ""
-        case .lassoSpin: return "¡mi lazo!"
-        case .stabbing: return "¡toma, cursor!"
-        case .cursorSetup: return "este cursor es mío..."
-        case .working: return "a trabajar..."
         }
     }
 }
@@ -136,9 +120,8 @@ enum StickmanAction: String, CaseIterable {
 
 final class StickmanController: ObservableObject {
 
-    // v3: identidad del personaje (TCO o Victim) y companero en escena
+    // v4: identidad del personaje (solo The Chosen One)
     let kind: CharacterKind
-    weak var peer: StickmanController? = nil
 
     init(kind: CharacterKind = .chosenOne) {
         self.kind = kind
@@ -232,13 +215,10 @@ final class StickmanController: ObservableObject {
     private var lastWidth: CGFloat = 390
     private var lastHeight: CGFloat = 600
 
-    // v3 internos: superficies, social, persecucion del dedo
+    // v3 internos: superficies y persecucion del dedo (se mantiene en v4)
     private var climbDir: CGFloat = 1               // +1 sube por la pared, -1 baja
     private var stepArrived: Bool = false           // el paso de plan llego a su destino
     private var chaseSitTimer: Double = -1          // al pillar el dedo, sentarse a mirarlo
-    private var joinRestTimer: Double = -1          // el otro descansa: unirse en breve
-    private var wantSitBesidePeer: Bool = false     // el otro descansa: ir a sentarse al lado
-    private var peerPowerCooldown: Double = 0
     private var lastDragX: CGFloat = 0
     private var chaseCooldown: Double = 0
     private var tripCooldown: Double = 0
@@ -334,91 +314,9 @@ final class StickmanController: ObservableObject {
         velocityY = 0; isWallSliding = false
     }
 
-    /// El otro personaje esta disponible para socializar (vivo, sin descansar ni agarrado).
-    var peerAvailable: Bool {
-        guard let p = peer, p.isAlive, !p.isResting else { return false }
-        return p.action != .grabbed && p.action != .drawn
-    }
-
-    // MARK: v3 — Reacciones sociales (las llama el OTRO personaje)
-
-    /// El companero me abraza: paso al rol espejo Hugged.
-    func beHugged(by other: StickmanController) {
-        guard isAlive, !isResting, !isDragged, surface == .floor else { return }
-        setFacing(other.x >= x ? 1 : -1)
-        startOverride(.hugged, duration: 2.4)
-        setThought(kind == .victim ? "eh... vale, un abrazo" : "vale, abrazo")
-        drives.registerKindPlay()
-    }
-    /// El companero quiere pelear de broma: respondo peleando o huyendo entre risas.
-    func beSparred(by other: StickmanController) {
-        guard isAlive, !isResting, !isDragged, surface == .floor else { return }
-        setFacing(other.x >= x ? 1 : -1)
-        if Bool.random() {
-            startOverride(.sparring, duration: 2.2); setThought("¡ja! ¡toma tú!")
-        } else {
-            startOverride(.fleeing, duration: 1.1); setThought("¡a mí no me das!")
-        }
-    }
-    /// El companero me roba la herramienta: me enfado (pisoton) o me rio.
-    func beRobbed(by other: StickmanController) {
-        guard isAlive, !isResting, !isDragged else { return }
-        setFacing(other.x >= x ? 1 : -1)
-        if kind == .victim || Bool.random() {
-            startOverride(.stomping, duration: 1.8); setThought("¡eh! ¡eso es MÍO!")
-            drives.registerAnnoyance()
-        } else {
-            startOverride(.laughing, duration: 1.6); setThought("¡ja! vale, quédatela")
-        }
-    }
-    /// El companero se sienta a mi lado: si estoy a mi bola, me siento con el.
-    func beSatBeside(by other: StickmanController) {
-        guard isAlive, !isResting, !isDragged, surface == .floor else { return }
-        if action == .idle || action == .sitting {
-            setFacing(other.x >= x ? 1 : -1)
-            startOverride(.sitting, duration: 4.0)
-        }
-    }
-    /// TCO ha usado un poder delante de mi (solo reacciona Victim):
-    /// se asusta, se esconde o le planta cara con el lazo.
-    func onPeerUsedPower() {
-        guard kind == .victim, isAlive, !isResting, !isDragged, peerPowerCooldown <= 0 else { return }
-        peerPowerCooldown = 6
-        guard let tco = peer else { return }
-        setFacing(tco.x >= x ? 1 : -1)
-        switch Int.random(in: 0...2) {
-        case 0:
-            startOverride(.scared, duration: 0.9); scaredBurstX = -facing * 230
-            setThought("¡¿pero qué haces?!")
-        case 1:
-            if let idx = nearestIntactObjectIndex() {
-                hideTargetX = objects[idx].x; hideObjectID = objects[idx].id
-                startOverride(.walking, duration: 1.6); setThought("yo me escondo...")
-            } else {
-                startOverride(.hiding, duration: 2.0); setThought("yo me escondo...")
-            }
-        default:
-            startOverride(.lassoSpin, duration: 2.2)
-            setThought("¡a mí no me quemas, eh!")
-        }
-    }
-    /// Victim ha provocado (lazo / apuñalar): TCO se rie o bloquea, sobrado.
-    func onPeerProvoked() {
-        guard kind == .chosenOne, isAlive, !isResting, !isDragged, peerPowerCooldown <= 0 else { return }
-        peerPowerCooldown = 5
-        guard let v = peer else { return }
-        setFacing(v.x >= x ? 1 : -1)
-        if Bool.random() { startOverride(.laughing, duration: 1.5); setThought("ja, buen intento") }
-        else { startOverride(.blocking, duration: 1.2); setThought("casi") }
-    }
-    /// El otro se ha puesto a descansar: a veces descanso con el; si no,
-    /// voy a sentarme a su lado (o a molestarle un poco).
-    func onPeerStartedRest() {
-        guard isAlive, !isResting else { return }
-        let roll = Double.random(in: 0...1)
-        if roll < 0.38 { joinRestTimer = Double.random(in: 1.5...3.5) }
-        else if roll < 0.78 { wantSitBesidePeer = true }
-    }
+    // v4: fuera las reacciones sociales del duo (beHugged / beSparred /
+    // beRobbed / beSatBeside / onPeerUsedPower / onPeerProvoked /
+    // onPeerStartedRest): no hay companero en escena.
 
     // MARK: Darle vida
 
@@ -453,19 +351,6 @@ final class StickmanController: ObservableObject {
             startOverride(alt, duration: durationFor(alt))
             if alt == .sword { ensureObject(.sword); swordProgress = 0; setThought("¡yo quiero la espada!") }
             else { setThought("mejor hago otra cosa") }
-        }
-    }
-
-    /// Boton «lazo» para Victim: su equivalente a lucirse.
-    func suggestVictimSpecial() {
-        guard isAlive, !isResting, kind == .victim else { return }
-        if Double.random(in: 0...1) <= 0.7 {
-            plan = Bool.random() ? PlanLibrary.victimLasso() : PlanLibrary.victimCursorRevenge()
-            planStepStarted = false; mode = .plan
-            setThought("¡mirad mi lazo!")
-        } else {
-            startOverride(.denying, duration: 1.4)
-            setThought("el lazo no es un juguete")
         }
     }
 
@@ -719,12 +604,11 @@ final class StickmanController: ObservableObject {
     // MARK: Poderes
 
     private func activatePower(_ power: Power) {
-        // v3: los poderes son SOLO de The Chosen One. Victim nunca entra aqui.
+        // Los poderes son de The Chosen One, el unico personaje (v4).
         guard kind == .chosenOne else { return }
         if surface != .floor { snapToFloor() }   // los poderes se usan desde el suelo
         activePower = power
         isChosenOne = true; chosenAuraTimer = 7
-        peer?.onPeerUsedPower()   // Victim reacciona (asustarse / esconderse / lazo)
         switch power {
         case .flight: action = .flying
         case .superSpeed: action = .running
@@ -772,7 +656,6 @@ final class StickmanController: ObservableObject {
         isResting = true
         restSecondsLeft = Double.random(in: 15...20)
         pausedPlan = plan; plan = nil
-        peer?.onPeerStartedRest()   // v3: el otro puede unirse o sentarse al lado
         if objects.contains(where: { $0.kind == .chair && $0.state == .intact }) == false { ensureObject(.chair) }
         action = .resting; mode = .override
         setThought("descanso...")
@@ -801,12 +684,12 @@ final class StickmanController: ObservableObject {
         let busy: Set<StickmanAction> = [.rolling, .landing, .dizzy, .grabbingFinger, .celebrating, .squashed, .escaping]
         if busy.contains(action) { return }
 
-        // v3 ChaseMouse (spec): si el dedo esta a media distancia, sin
-        // violencia y el personaje esta curioso (Victim: reivindicativo),
-        // lo PERSIGUE corriendo por el suelo; al llegar se sienta a mirarlo.
+        // ChaseMouse: si el dedo esta a media distancia, sin violencia
+        // y TCO esta curioso, lo PERSIGUE corriendo por el suelo; al
+        // llegar se sienta a mirarlo.
         if surface == .floor, chaseCooldown <= 0, !isChasingFinger {
             let distF = fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62)
-            let wantsChase = kind == .victim ? drives.mischief > 42 : drives.curiosity > 52
+            let wantsChase = drives.curiosity > 52
             if distF > 170 && distF < 460 && fingerTracker.speed < 300 && wantsChase
                 && Double.random(in: 0...1) < 0.3 {
                 isChasingFinger = true
@@ -814,7 +697,7 @@ final class StickmanController: ObservableObject {
                 lastDecision = "perseguir el dedo (ChaseMouse)"
                 setFacing(fingerTracker.point.x >= x ? 1 : -1)
                 startOverride(.chasingFinger, duration: 2.6)
-                setThought(kind == .victim ? "¡ese cursor es mío!" : "¡a por ese dedo!")
+                setThought("¡a por ese dedo!")
                 return
             }
         }
@@ -926,14 +809,9 @@ final class StickmanController: ObservableObject {
             microActivity = options.randomElement() ?? "respira"
         }
 
-        // v3: enfriamientos y descanso compartido
-        if peerPowerCooldown > 0 { peerPowerCooldown -= dt }
+        // v3: enfriamientos
         if chaseCooldown > 0 { chaseCooldown -= dt }
         if tripCooldown > 0 { tripCooldown -= dt }
-        if joinRestTimer > 0 {
-            joinRestTimer -= dt
-            if joinRestTimer <= 0, !isResting { startRest(); return }
-        }
         // ChaseMouse: al pillar el dedo, se sienta a mirarlo (SitAndFaceMouse)
         if chaseSitTimer >= 0 {
             chaseSitTimer -= dt
@@ -1095,14 +973,7 @@ final class StickmanController: ObservableObject {
                 action = .idle
                 moveSpeed = 0
                 if planGapTimer <= 0 {
-                    // v3: si el otro descansa y queria sentarme a su lado, ese es el plan
-                    if wantSitBesidePeer, peerAvailable || (peer?.isResting ?? false) {
-                        wantSitBesidePeer = false
-                        plan = PlanLibrary.sitTogether()
-                    } else {
-                        plan = PlanLibrary.choosePlan(drives: drives, memory: memory, perception: perception,
-                                                      kind: kind, hasPeer: peerAvailable)
-                    }
+                    plan = PlanLibrary.choosePlan(drives: drives, memory: memory, perception: perception)
                     planStepStarted = false
                     currentPlanName = plan?.name ?? "Sin plan"
                 }
@@ -1116,12 +987,6 @@ final class StickmanController: ObservableObject {
                     if let power = step.power { activatePower(power) }
                     else if step.action == .powerPose, kind == .chosenOne { isChosenOne = true; chosenAuraTimer = 7 }
                     if step.action == .flying { activatePower(.flight) }
-                    // v3 social: avisar al companero al empezar el paso clave
-                    if step.action == .hugging { peer?.beHugged(by: self) }
-                    if step.action == .sparring { peer?.beSparred(by: self) }
-                    if step.action == .sitting, current.name == "Sentarse juntos" { peer?.beSatBeside(by: self) }
-                    if step.action == .lassoSpin || step.action == .stabbing { peer?.onPeerProvoked() }
-                    if step.action == .usingTool, current.name == "Robar la herramienta" { peer?.beRobbed(by: self) }
                     if !step.thought.isEmpty { setThought(step.thought) }
                 }
                 plan!.stepTimer += dt
@@ -1154,20 +1019,12 @@ final class StickmanController: ObservableObject {
     }
 
     private func executeStep(_ step: PlanStep, dt: Double) {
-        // v3: destino del paso (x fija o el otro personaje, en vivo)
-        let destX: CGFloat? = step.targetPeer ? peer?.x : (step.targetX >= 0 ? step.targetX : nil)
+        // v3: destino del paso (x fija)
+        let destX: CGFloat? = step.targetX >= 0 ? step.targetX : nil
         if let dest = destX, surface == .floor,
-           [.walking, .running, .chasingPeer, .usingTool].contains(step.action) {
+           [.walking, .running, .usingTool].contains(step.action) {
             setFacing(dest >= x ? 1 : -1)
             if abs(dest - x) < 16 { stepArrived = true }
-            // Al llegar junto al otro, los pasos sociales miran hacia el
-            if step.targetPeer, abs(dest - x) < 40 { setFacing(dest >= x ? 1 : -1) }
-        }
-        // Separacion suave: no solaparse con el companero en el suelo
-        if surface == .floor, let p = peer, p.surface == .floor,
-           !isAirborne, p.isAlive, abs(p.x - x) < 26,
-           ![.hugging, .hugged, .sparring].contains(action) {
-            x += (x <= p.x ? -1 : 1) * 26 * CGFloat(dt)
         }
         // Plataforma destino (trepar / bajar de la interfaz)
         if step.targetPlatform >= 0 {
@@ -1215,9 +1072,7 @@ final class StickmanController: ObservableObject {
         case .climbing: return 30
         case .playingBall: return 78
         case .fighting: return 24
-        case .chasingPeer: return 158     // v3: perseguir al otro, ritmo de correr
         case .chasingFinger: return 196   // v3 ChaseMouse: Dash de la spec
-        case .sparring: return 26
         case .scared: return 0   // el retroceso va por scaredBurstX
         default: return 0
         }
@@ -1269,8 +1124,8 @@ final class StickmanController: ObservableObject {
             _ = updateSurfaceLocomotion(dt: dt)
             return
         }
-        // v3 Trip: corriendo (o persiguiendo) puede tropezar, como en la spec
-        if tripCooldown <= 0, moveSpeed > 145, action == .running || action == .chasingPeer || action == .chasingFinger {
+        // v3 Trip: corriendo (o persiguiendo al dedo) puede tropezar, como en la spec
+        if tripCooldown <= 0, moveSpeed > 145, action == .running || action == .chasingFinger {
             if Double.random(in: 0...1) < dt * 0.055 {
                 tripCooldown = 14
                 isChasingFinger = false

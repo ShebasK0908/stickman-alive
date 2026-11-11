@@ -1,14 +1,13 @@
 import SwiftUI
 
-// MARK: - Dibujo procedural del stickman (Canvas, sin assets) — v3
+// MARK: - Dibujo procedural del stickman (Canvas, sin assets) — v4
 // La pose se MUESTREA de los clips de keyframes de StickmanAnimation.swift
 // (con blend caminar<->correr segun velocidad).
 //
-// v3: DOS personajes (cada Canvas dibuja el suyo, con SU color):
-// The Chosen One (negro) y Victim (gris). Roaming 360: en el TECHO el
-// cuerpo se dibuja INVERTIDO (ancla en el borde superior, balanceo
-// swing) y en las PAREDES trepa/colgado junto al borde. El lazo de
-// Victim y su "cursor" vengado se dibujan aqui tambien.
+// v4: UN personaje, The Chosen One (negro, trazo solido, cabeza llena
+// como nuestro dibujo de siempre). Roaming 360: en el TECHO el cuerpo
+// se dibuja INVERTIDO (ancla en el borde superior, balanceo swing) y en
+// las PAREDES trepa/colgado junto al borde.
 
 struct StickmanCanvasView: View {
     @ObservedObject var controller: StickmanController
@@ -330,7 +329,7 @@ struct StickmanCanvasView: View {
             return AnimationLibrary.fallPose.sample(at: c.animTime)
         }
         switch c.action {
-        case .walking, .running, .fleeing, .playingBall, .chasingPeer, .chasingFinger:
+        case .walking, .running, .fleeing, .playingBall, .chasingFinger:
             // Blend caminar<->correr por velocidad REAL, fase de zancada ligada a la velocidad
             let walkPose = AnimationLibrary.walk.sample(at: c.gaitPhase01 * AnimationLibrary.walk.duration)
             let runPose = AnimationLibrary.run.sample(at: c.gaitPhase01 * AnimationLibrary.run.duration)
@@ -403,37 +402,12 @@ struct StickmanCanvasView: View {
         body.move(to: j.neck); body.addLine(to: j.elbowR); body.addLine(to: j.handR)
         ctx.stroke(body, with: .color(color), style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
 
-        // Cabeza HUECA (con squash vertical del clip)
+        // Cabeza LLENA/solida (con squash vertical del clip): asi es TCO
+        // en AvA 2 y asi es nuestro dibujo de siempre, el que el usuario aprobo.
         let headH = 40 * pose.squash
         let headW = 40 * (1 + (1 - pose.squash) * 0.55)
-        ctx.stroke(Path(ellipseIn: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH)),
-                   with: .color(color), lineWidth: lw)
-
-        // v3 Victim: el LAZO girando sobre su cabeza (SpinLasso)
-        if c.action == .lassoSpin {
-            let r = 26 + CGFloat(sin(c.phase * 9)) * 4
-            var lasso = Path()
-            lasso.addEllipse(in: CGRect(x: j.handR.x - r, y: j.handR.y - 10, width: r * 2, height: 17))
-            ctx.stroke(lasso, with: .color(Color(red: 0.6, green: 0.45, blue: 0.25)), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-            var rope = Path(); rope.move(to: j.handR); rope.addLine(to: CGPoint(x: j.handR.x + r * 0.4, y: j.handR.y - 8))
-            ctx.stroke(rope, with: .color(Color(red: 0.6, green: 0.45, blue: 0.25)), lineWidth: 3)
-        }
-        // v3 Victim: "su" cursor colocado junto a el (CursorSetup / Stabbing)
-        if c.action == .cursorSetup || c.action == .stabbing {
-            let cur = CGPoint(x: cx + f * 56, y: ground - 96)
-            ctx.draw(Text("➤").font(.system(size: 30)).foregroundColor(.black), at: cur)
-            if c.action == .stabbing {
-                // La herramienta con la que apuñala
-                var knife = Path(); knife.move(to: j.handR); knife.addLine(to: CGPoint(x: j.handR.x + f * 17, y: j.handR.y + 8))
-                ctx.stroke(knife, with: .color(.gray), lineWidth: 3.5)
-            }
-        }
-        // v3 Victim trabajando: papel sobre la mesa que pica sin parar
-        if c.action == .working {
-            var paper = Path()
-            paper.addRect(CGRect(x: cx + f * 18 - 13, y: ground - 34, width: 26, height: 18))
-            ctx.stroke(paper, with: .color(.gray), lineWidth: 2)
-        }
+        ctx.fill(Path(ellipseIn: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH)),
+                 with: .color(color))
 
         // Herramientas/objetos EN LA MANO segun la accion
         let hand = j.handR
