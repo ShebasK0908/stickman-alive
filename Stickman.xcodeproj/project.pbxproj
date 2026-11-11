@@ -1,0 +1,238 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		000000000000000000000032 /* StickmanApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00000000000000000000001F /* StickmanApp.swift */; };
+		000000000000000000000033 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000020 /* ContentView.swift */; };
+		000000000000000000000034 /* StickmanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000021 /* StickmanEngine.swift */; };
+		000000000000000000000035 /* StickmanBrain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000022 /* StickmanBrain.swift */; };
+		000000000000000000000036 /* StickmanPowers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000023 /* StickmanPowers.swift */; };
+		000000000000000000000037 /* StickmanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000024 /* StickmanView.swift */; };
+		00000000000000000000003C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000028 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		00000000000000000000001F /* StickmanApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanApp.swift; sourceTree = "<group>"; };
+		000000000000000000000020 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		000000000000000000000021 /* StickmanEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanEngine.swift; sourceTree = "<group>"; };
+		000000000000000000000022 /* StickmanBrain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanBrain.swift; sourceTree = "<group>"; };
+		000000000000000000000023 /* StickmanPowers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanPowers.swift; sourceTree = "<group>"; };
+		000000000000000000000024 /* StickmanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanView.swift; sourceTree = "<group>"; };
+		000000000000000000000014 /* Stickman.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Stickman.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		000000000000000000000028 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		000000000000000000000029 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		000000000000000000000008 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		000000000000000000000002 = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000004 /* Stickman */,
+				000000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		000000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				000000000000000000000014 /* Stickman.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		000000000000000000000004 /* Stickman */ = {
+			isa = PBXGroup;
+			children = (
+				00000000000000000000001F /* StickmanApp.swift */,
+				000000000000000000000020 /* ContentView.swift */,
+				000000000000000000000021 /* StickmanEngine.swift */,
+				000000000000000000000022 /* StickmanBrain.swift */,
+				000000000000000000000023 /* StickmanPowers.swift */,
+				000000000000000000000024 /* StickmanView.swift */,
+				000000000000000000000028 /* Assets.xcassets */,
+				000000000000000000000029 /* Info.plist */,
+			);
+			path = Stickman;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		000000000000000000000005 /* Stickman */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 00000000000000000000000A /* Build configuration list for PBXNativeTarget "Stickman" */;
+			buildPhases = (
+				000000000000000000000006 /* Sources */,
+				000000000000000000000008 /* Frameworks */,
+				000000000000000000000007 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Stickman;
+			productName = Stickman;
+			productReference = 000000000000000000000014 /* Stickman.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		000000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					000000000000000000000005 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = 000000000000000000000009 /* Build configuration list for PBXProject "Stickman" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 000000000000000000000002;
+			productRefGroup = 000000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				000000000000000000000005 /* Stickman */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		000000000000000000000007 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				00000000000000000000003C /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		000000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				000000000000000000000032 /* StickmanApp.swift in Sources */,
+				000000000000000000000033 /* ContentView.swift in Sources */,
+				000000000000000000000034 /* StickmanEngine.swift in Sources */,
+				000000000000000000000035 /* StickmanBrain.swift in Sources */,
+				000000000000000000000036 /* StickmanPowers.swift in Sources */,
+				000000000000000000000037 /* StickmanView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		00000000000000000000000B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		00000000000000000000000C /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		00000000000000000000000D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Manual;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Stickman/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				CURRENT_PROJECT_VERSION = 1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.stickman.alive;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		00000000000000000000000E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Manual;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Stickman/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				CURRENT_PROJECT_VERSION = 1;
+				PRODUCT_BUNDLE_IDENTIFIER = dev.stickman.alive;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		000000000000000000000009 /* Build configuration list for PBXProject "Stickman" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000000B /* Debug */,
+				00000000000000000000000C /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		00000000000000000000000A /* Build configuration list for PBXNativeTarget "Stickman" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				00000000000000000000000D /* Debug */,
+				00000000000000000000000E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 000000000000000000000001 /* Project object */;
+}
