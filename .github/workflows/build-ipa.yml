@@ -1,0 +1,41 @@
+name: Build iOS IPA (sin firmar)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Versión de Xcode
+        run: xcodebuild -version
+
+      - name: Compilar y empaquetar el .ipa
+        run: ./build.sh
+
+      - name: Subir el .ipa como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Stickman-ipa
+          path: Stickman.ipa
+          if-no-files-found: error
+
+      - name: Publicar en la Release app-v1
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view app-v1 >/dev/null 2>&1; then
+            gh release upload app-v1 Stickman.ipa --clobber
+          else
+            gh release create app-v1 Stickman.ipa \
+              --title "Stickman app-v1" \
+              --notes "Stickman.ipa sin firmar. Instálalo con SideStore (ver README.md)."
+          fi
