@@ -20,6 +20,12 @@
 	<string>1</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<!-- Requerido para que el modo flotante (PiP) pueda seguir vivo
+		     al salir de la app: PiP exige sesion de audio playback. -->
+		<string>audio</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

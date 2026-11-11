@@ -20,6 +20,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var tco = StickmanController(kind: .chosenOne)
+    @ObservedObject private var pip = FloatingPiPManager.shared
 
     @State private var showBrain = false
     @State private var showConsole = false
@@ -147,6 +148,12 @@ struct ContentView: View {
             GeometryReader { geo in
                 ZStack(alignment: .topLeading) {
                     Rectangle().fill(Color.white)
+                    // Anfitrion (2x2, invisible) de la capa del modo flotante:
+                    // el PiP despega desde esta AVSampleBufferDisplayLayer.
+                    PiPLayerHost(layer: pip.displayLayer)
+                        .frame(width: 2, height: 2)
+                        .opacity(0.02)
+                        .allowsHitTesting(false)
                     gridOverlay(size: geo.size)
                     StickmanCanvasView(controller: tco)
                         .offset(x: shakeOffset)
@@ -418,6 +425,7 @@ struct ContentView: View {
                 suggestionButton("🪑 Sentarse") { tco.suggest(.sitting) }
                 suggestionButton("💤 Dormir") { tco.suggestSleep() }
                 suggestionButton("⚡ Chosen One") { tco.suggestChosenOne() }
+                floatingButton
             }
             .padding(.horizontal, 10).padding(.vertical, 8)
         }
@@ -433,5 +441,21 @@ struct ContentView: View {
                 .cornerRadius(12)
         }
         .disabled(!tco.isAlive)
+    }
+
+    // MARK: Boton del modo flotante (v5): saca a TCO en una ventana PiP
+    // que flota sobre las demas apps. No depende de que el personaje de
+    // la escena principal este "vivo": la ventanita tiene su propio motor.
+
+    private var floatingButton: some View {
+        Button(action: { pip.toggle() }) {
+            Text(pip.isFloating ? "🪟 ¡Está flotando!" : "🪟 Modo flotante")
+                .font(.callout.bold()).foregroundColor(.white)
+                .padding(.horizontal, 15).padding(.vertical, 12)
+                .background(pip.isSupported ? (pip.isEnabled ? Color.blue : Color.teal) : Color.gray)
+                .cornerRadius(12)
+        }
+        .disabled(!pip.isSupported)
+        .accessibilityLabel("Modo flotante: ventana sobre las demás apps")
     }
 }
