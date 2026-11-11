@@ -1,14 +1,57 @@
 # Stickman con Vida — app para iPhone (.ipa)
 
-Un stickman naranja de cabeza hueca, como The Second Coming de Alan Becker
-(*Animator vs. Animation*), que **cobra vida dentro de un falso programa de
-animación** (lienzo blanco, barra de herramientas, línea de tiempo) y vive ahí
-con voluntad propia. Swift puro + SwiftUI + Canvas, sin dependencias ni assets
-externos: todo se dibuja y se anima por código.
+**The Chosen One** de Alan Becker (*Animator vs. Animation*): un stickman
+negro dibujado por código (trazo sólido, cabeza llena — el dibujo de
+siempre, el que el usuario aprobó) que **cobra vida dentro de un falso
+programa de animación** (lienzo blanco, barra de herramientas, línea de
+tiempo) y vive ahí con voluntad propia. Swift puro + SwiftUI + Canvas,
+sin dependencias ni assets externos: todo se dibuja y se anima por código.
 
 Bundle ID: `dev.stickman.alive` · Mínimo: iOS 16.0 · Sin firmar (para SideStore).
 
-## v3 — DOS personajes y roaming 360° (ejemplo Shimeji superado)
+## v4 — SOLO The Chosen One y pase de animación «como en los vídeos»
+
+Dos cambios, pedidos por el usuario tras probar la v3 («está mal»):
+
+1. **Un solo personaje.** Victim sale de la escena: fuera el dúo, sus
+   únicos (lazo, cursor apuñalado, «a trabajar»), los planes y clips
+   sociales (abrazos, sparring entre los dos, robarse la herramienta,
+   sentarse juntos, descanso compartido) y su panel de cerebro. La app
+   es de The Chosen One, solo. Todo lo demás de la v3 se conserva para
+   él: superficies (suelo/paredes/techo/bordes), ChaseMouse y sentarse
+   a mirar el dedo, arrastrado con inclinación según el tirón, lanzado,
+   toolbar funcional con modos, dibujar que cobra vida, IA de defensa,
+   cerebro complejo con descansos cada 2 min y sus poderes.
+2. **Pase de animación sobre los vídeos de Alan Becker que envió el
+   usuario** (patrones destilados en `REFERENCES.md`). Su queja
+   constante es EL MOVIMIENTO, así que los clips clave se han rehecho
+   con estructura de animación tradicional — anticipación → acción
+   rápida → pose de impacto aguantada → settle — y timing irregular,
+   en vez de ciclos uniformes:
+
+   | Clip rehecho | Qué cambió | Patrón / vídeo |
+   |---|---|---|
+   | `run` | Carrera **pesada**: torso muy inclinado (cuello +16), zancada larguísima (±33), bombeo de brazos cruzando el cuerpo con codos flexionados, y por ciclo: contacto corto (snappy) → **absorción** con squash 0,92 → **impulso**/toe-off con stretch 1,05 → **fase de vuelo** larga sin ningún pie en el suelo. | TCO corriendo en **AvA 2** |
+   | `walk` | Contactos que se aguantan más que las pasadas (0/.19/.40/.585 en 0,78 s), boteo con caída real al apoyar (56→51,5), balanceo contralateral amplio y cabeza con follow-through a contrafase. | Andar con peso de **AvA 1 / AvA 4** |
+   | `jumpCrouch` / `jumpStretch` / `landing` / `roll` | Anticipación más larga y profunda (dos tiempos, squash 0,78, brazos muy atrás), stretch 1,17 al despegar, aterrizaje con squash 0,74 **aguantado**, overshoot y settle; rodada con manos al suelo y salida con impulso. | Saltos/caídas de **AvA 1 y AvA 2** |
+   | `fallPose` | Brazos arriba en pánico leve y braceo asimétrico preparando el impacto. | Caídas de **AvA 1** |
+   | `fightCombo` | Combo reescrito (3,6 s): guardia con bounce → **jab** (anticipación, golpe seco snappy, impacto aguantado, recogida lenta) → **cross** con cadera, igual → **patada frontal** con chamber → **barrido giratorio** con anticipación larga agachado. | Guerra contra el cursor en **AvA 1**; golpes con todo el cuerpo en **AvA 2** |
+   | `block` / `dodgeDuck` | Bloqueo con **flinch** de impacto (le empuja atrás y se replanta); esquiva que baja de golpe, sin anticipación, y sube con cautela. | Defensa de **AvA 1** |
+   | `grabFinger` | Agarrarse al cursor y **forcejear**: se cuelga, se balancea, **patea el dedo** y **intenta trepar por él** hasta que se le acaba la fuerza. | TCO/victim agarrando el cursor en **AvA 1** |
+   | `grabbed` | Pataleo **frenético** (6 poses lineales, patadas alternas y a la vez, retorciéndose). | Ser arrastrado en **AvA 1** |
+   | `escapeShake` | La sacudida para escapar de la caja de selección **crece en amplitud** (±2 → ±6) empujando las «paredes» de la caja. | Escape de la selección en **AvA 1** |
+   | `skid` | Más echado atrás, molinete de brazos buscando equilibrio y settle largo. | Frenadas de **AvA 2** |
+   | `scared` | Pánico en dos tiempos: **susto** (brinco seco con manos a la cabeza y stretch) → **temblor** con manos en alto. | Reacción al cursor en **AvA 1** |
+   | `stomp` | Enfado con cuerpo: se hincha el pecho y pega **dos pisotones** con aguante de impacto. | Berrinche de **AvA 1** |
+   | `powerPose` / `chargePower` / `superPunchPose` | La pose de poder **entra**: carga agachado → explota con el puño al cielo → aguanta. La carga de energía **tiembla cada vez más** (amplitud 1→3) hasta que el aura estalla. El superpuñetazo gana anticipación larga (carga máxima aguantada) e impacto clavado. | Transformaciones y golpes de **AvA 2** |
+
+   Nota honesta: los patrones salen de los vídeos y de lo destilado en
+   `REFERENCES.md`; no se ha copiado ningún frame ni asset de nadie —
+   son los clips procedurales de siempre, rehechos con mejor timing y
+   poses más marcadas. El resto del catálogo (idle, baile, dormir,
+   esgrima, superficies de la v3, poderes…) no se ha tocado en este pase.
+
+## v3 — DOS personajes y roaming 360° (ejemplo Shimeji superado) — *histórico: la v4 lo reduce a un solo personaje*
 
 El usuario envió como ejemplo un Shimeji-ee fan de Alan Becker (9
 personajes, 1.328 frames PNG, 51 behaviors) y pidió: *el catálogo entero
@@ -327,26 +370,24 @@ sin marcadores sin sustituir).
 
 - `Stickman/StickmanApp.swift` — Punto de entrada `@main`.
 - `Stickman/ContentView.swift` — La escena/programa de animación falso,
-  gestos táctiles (agarre/toque al personaje más cercano), consola falsa
-  de «Darles vida», barra de sugerencias y panel 🧠 doble (v3).
-- `Stickman/StickmanBrain.swift` — El cerebro: `CharacterKind` (TCO /
-  Victim) y `StickSurface` (v3), `Perception`, `Drives`, `Emotion`,
-  `ShortMemory`, `Plan`/`PlanStep` (con destino x / compañero /
-  superficie) y `PlanLibrary` (planes v2 + roaming 360 + sociales +
-  únicos de Victim).
-- `Stickman/StickmanEngine.swift` — `StickmanController` (una instancia
-  por personaje): física (gravedad, saltos, lanzamientos), motor de
+  gestos táctiles (agarre/toque), consola falsa de «Darle vida», barra
+  de sugerencias y panel 🧠 (v4: un solo cerebro, el de TCO).
+- `Stickman/StickmanBrain.swift` — El cerebro: `CharacterKind` (v4:
+  solo `chosenOne`) y `StickSurface` (v3), `Perception`, `Drives`,
+  `Emotion`, `ShortMemory`, `Plan`/`PlanStep` (con destino x /
+  superficie) y `PlanLibrary` (planes v2 + roaming 360).
+- `Stickman/StickmanEngine.swift` — `StickmanController` (una única
+  instancia, TCO): física (gravedad, saltos, lanzamientos), motor de
   superficies 360°, ejecutor de planes, ciclo de descanso de 120 s,
-  reacciones al dedo y al compañero, y sugerencias con probabilidad de
-  obediencia.
+  reacciones al dedo y sugerencias con probabilidad de obediencia.
 - `Stickman/StickmanPowers.swift` — `enum Power`, objetos dibujados
   (`DrawnObject`) y el `ParticleSystem`.
-- `Stickman/StickmanView.swift` — Dibujo procedural en Canvas por
-  personaje: esqueleto articulado, poses por acción/poder, inversión en
-  el techo, lazo y cursor de Victim, objetos, amigo, aura, fantasmas,
-  láser/fuego/hielo y partículas.
+- `Stickman/StickmanView.swift` — Dibujo procedural en Canvas:
+  esqueleto articulado, cabeza llena, poses por acción/poder, inversión
+  en el techo, objetos, amigo, aura, fantasmas, láser/fuego/hielo y
+  partículas.
 - `Stickman/StickmanAnimation.swift` — Clips de keyframes (v2 + v3:
-  superficies, abrazos, lazo, stab, trabajo, dangle irregular…).
+  superficies y dangle irregular + pase v4 de locomoción/pelea).
 - `Stickman/Info.plist`, `Stickman/Assets.xcassets` — Configuración e icono
   (catálogo vacío: la app compila sin icono personalizado).
 - `Stickman.xcodeproj` — Proyecto Xcode (iOS 16.0, Swift 5).
