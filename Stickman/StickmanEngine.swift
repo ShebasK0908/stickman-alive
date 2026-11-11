@@ -39,6 +39,9 @@ enum StickmanAction: String, CaseIterable {
     // v3 — dedo (se mantiene en la v4)
     case chasingFinger // Perseguir el dedo del usuario (ChaseMouse)
     case sittingFacingFinger // Sentado mirando al dedo (SitAndFaceMouse)
+    // v6 — clips nuevos cableados en la integracion de la auditoria
+    case gettingUp     // Levantarse del suelo tras tropezar (clip getUp)
+    case escapeBurst   // Romper la caja de seleccion al escapar del agarre (clip escapeBurst)
     // v4: salen las acciones sociales del duo (chasingPeer, sparring,
     // hugging, hugged, hugOffer) y los unicos de Victim (lassoSpin,
     // stabbing, cursorSetup, working): la app es de UN personaje.
@@ -100,6 +103,8 @@ enum StickmanAction: String, CaseIterable {
         case .dropping: return "¡me suelto!"
         case .chasingFinger: return "¡ese dedo es mío!"
         case .sittingFacingFinger: return ""
+        case .gettingUp: return ""
+        case .escapeBurst: return "¡me escapo!"
         }
     }
 }
@@ -400,6 +405,9 @@ final class StickmanController: ObservableObject {
         action = a; mode = .override; overrideTimer = duration
         shieldKind = nil
         if a != .hiding { hidingObjectID = nil }
+        // v6: una cadena pendiente solo sobrevive al arranque de su propio clip
+        if a != .tripping { tripChainPending = false }
+        if a != .escapeBurst { pendingEscapeThrow = nil }
         // Sin giros al azar: quien llama (sugerencia, IA o plan) ya ha fijado el rumbo con setFacing.
     }
 
@@ -558,6 +566,7 @@ final class StickmanController: ObservableObject {
         guard isAlive else { return }
         if surface != .floor { snapToFloor() }   // v3: agarrarlo lo despega de pared/techo
         interactionBrain.registerGrabAttempt(now: elapsed)
+        tripChainPending = false; pendingEscapeThrow = nil   // v6: agarrarlo corta las cadenas
         action = .grabbed; mode = .physics; velocityX = 0; velocityY = 0
         lastDragX = x; pinchLean = 0
         moveSpeed = 0
@@ -653,6 +662,7 @@ final class StickmanController: ObservableObject {
 
     private func startRest() {
         if surface != .floor { snapToFloor() }   // v3: se descansa en el suelo
+        tripChainPending = false; pendingEscapeThrow = nil   // v6: el descanso corta las cadenas
         isResting = true
         restSecondsLeft = Double.random(in: 15...20)
         pausedPlan = plan; plan = nil
@@ -681,7 +691,7 @@ final class StickmanController: ObservableObject {
         guard fingerTracker.present, toolMode == .cursor, !isDragged, !isResting,
               mode != .physics, iaCooldown <= 0 else { return }
         // No interrumpir animaciones con peso (rodar, aterrizar, mareo, celebracion...)
-        let busy: Set<StickmanAction> = [.rolling, .landing, .dizzy, .grabbingFinger, .celebrating, .squashed, .escaping]
+        let busy: Set<StickmanAction> = [.rolling, .landing, .dizzy, .grabbingFinger, .celebrating, .squashed, .escaping, .gettingUp, .escapeBurst]
         if busy.contains(action) { return }
 
         // ChaseMouse: si el dedo esta a media distancia, sin violencia
@@ -846,11 +856,13 @@ final class StickmanController: ObservableObject {
             if dragTime >= 2.2 {
                 isDragged = false
                 dragEscapeSignal += 1
-                velocityX = (fingerTracker.point.x >= x ? -1 : 1) * 330
-                velocityY = 390
-                action = .thrown; mode = .physics
                 memory.annoyances += 1; drives.registerAnnoyance()
                 setThought("¡me escapo!")
+                // v6: primero ROMPE la caja (escapeBurst, 0.85 s) y el
+                // lanzamiento (330/390, como antes) se aplica al terminar
+                // el clip, en la rama de expiracion del override de tick.
+                startOverride(.escapeBurst, duration: 0.85)
+                pendingEscapeThrow = (vx: (fingerTracker.point.x >= x ? -1 : 1) * 330, vy: 390)
             }
             return
         }
@@ -895,7 +907,7 @@ final class StickmanController: ObservableObject {
 
         // ------- FISICA (saltos / lanzamientos / caidas) -------
         // v3: anclado a pared/techo la altura NO es caida: manda la superficie.
-        if (mode == .physics || isAirborne) && surface == .floor {
+        if (mode == .physics || isAirborne) && surface == .floor && action != .escapeBurst {
             if action != .flying {
                 let atLeftWall = x <= 35, atRightWall = x >= stageWidth - 35
                 isWallSliding = (atLeftWall || atRightWall) && velocityY < -60 && heightAboveGround > 4
@@ -934,10 +946,19 @@ final class StickmanController: ObservableObject {
                 hidingObjectID = hideObjectID
             }
             if overrideTimer <= 0 {
-                if overrideLandingChain == .dizzy {
+                if let pending = pendingEscapeThrow {
+                    // v6: fin de escapeBurst -> sale lanzado (como hacia antes del cableado)
+                    pendingEscapeThrow = nil
+                    velocityX = pending.vx; velocityY = pending.vy
+                    action = .thrown; mode = .physics
+                } else if overrideLandingChain == .dizzy {
                     overrideLandingChain = nil
                     startOverride(.dizzy, duration: 1.4)
                     setThought("todo da vueltas...")
+                } else if tripChainPending {
+                    // v6: trip acaba en la pose del suelo (0.5 s) -> encadena getUp
+                    tripChainPending = false
+                    startOverride(.gettingUp, duration: 1.05)
                 } else {
                     mode = .plan; if plan == nil { planGapTimer = 0.3 }
                 }
@@ -1004,10 +1025,12 @@ final class StickmanController: ObservableObject {
     }
 
     private var overrideLandingChain: StickmanAction? = nil
+    private var tripChainPending = false        // v6: tras trip (0.5 s) encadena getUp
+    private var pendingEscapeThrow: (vx: CGFloat, vy: CGFloat)? = nil  // v6: lanzamiento al terminar escapeBurst
 
     /// Si el suelo (plataforma o trazo del usuario) sube/baja bajo sus pies, se ajusta o cae.
     private func groundSnap(dt: Double) {
-        if action == .flying || isDragged { return }
+        if action == .flying || action == .escapeBurst || isDragged { return }
         if surface != .floor { return }   // v3: anclado a pared/techo no hay suelo que ajustar
         let target = groundTotalHeight(at: x) - platformHeight
         if heightAboveGround < target - 1 {
@@ -1129,7 +1152,10 @@ final class StickmanController: ObservableObject {
             if Double.random(in: 0...1) < dt * 0.055 {
                 tripCooldown = 14
                 isChasingFinger = false
-                startOverride(.tripping, duration: 1.5)
+                // v6: trip dura 0.5 s y acaba en la pose del suelo; al expirar
+                // el override, tick encadena el clip getUp (tripChainPending).
+                startOverride(.tripping, duration: 0.5)
+                tripChainPending = true
                 dodgeBurst = 120; dodgeBurstTimer = 0.3
                 setThought("¡ay! ¡he tropezado!")
                 return

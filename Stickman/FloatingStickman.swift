@@ -152,7 +152,7 @@ enum FloatingRenderer {
         // Aura amarilla cuando suelta un poder
         if engine.mode == .power {
             let auraAlpha = 0.16 + 0.06 * sin(engine.animTime * 6)
-            ctx.setFillColor(CGColor(red: 1.0, green: 0.85, blue: 0.1, alpha: auraAlpha))
+            ctx.setFillColor(CGColor(red: 1.0, green: 0.85, blue: 0.1, alpha: CGFloat(auraAlpha)))
             ctx.fillEllipse(in: CGRect(x: engine.x - 70, y: ground - 180, width: 140, height: 180))
         }
 
@@ -210,7 +210,7 @@ enum FloatingRenderer {
                 let zx = j.head.x - 26 + CGFloat(cycle) * 20
                 let zy = j.head.y - 30 - CGFloat(cycle) * 34
                 let s = CGFloat(5 + cycle * 5)
-                ctx.setStrokeColor(CGColor(red: 0.25, green: 0.45, blue: 0.85, alpha: 0.85 * (1 - cycle)))
+                ctx.setStrokeColor(CGColor(red: 0.25, green: 0.45, blue: 0.85, alpha: CGFloat(0.85 * (1 - cycle))))
                 ctx.setLineWidth(2.4)
                 ctx.move(to: CGPoint(x: zx - s, y: zy - s))
                 ctx.addLine(to: CGPoint(x: zx + s, y: zy - s))

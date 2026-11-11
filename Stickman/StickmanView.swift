@@ -80,7 +80,7 @@ struct StickmanCanvasView: View {
             drawObject(context: &context, object: object, groundY: groundY, stickmanX: cx, effectiveGround: effectiveGround)
         }
         // Caja de seleccion de AvA1 cuando esta agarrado / escapando
-        if c.action == .grabbed || c.action == .escaping {
+        if c.action == .grabbed || c.action == .escaping || c.action == .escapeBurst {
             var box = Path()
             box.addRect(CGRect(x: cx - 44, y: effectiveGround - 148, width: 88, height: 148))
             context.stroke(box, with: .color(.blue.opacity(0.75)), style: StrokeStyle(lineWidth: 1.6, dash: [6, 4]))
@@ -159,7 +159,7 @@ struct StickmanCanvasView: View {
             var p = Path(); p.move(to: CGPoint(x: ox - 12, y: groundY)); p.addLine(to: CGPoint(x: ox + 14, y: groundY - 26))
             ctx.stroke(p, with: .color(.gray), lineWidth: 3.5)
         case .ball:
-            let bounce = controller.action == .playingBall ? abs(sin(object.bouncePhase)) * 20 : 0
+            let bounce = controller.action == .playingBall ? CGFloat(abs(sin(object.bouncePhase))) * 20 : 0
             ctx.fill(Path(ellipseIn: CGRect(x: ox - 13, y: groundY - 26 - bounce, width: 26, height: 26)), with: .color(.red))
         case .chair:
             var p = Path()
@@ -327,6 +327,10 @@ struct StickmanCanvasView: View {
             if c.action == .thrown { return AnimationLibrary.thrownSpin.sample(at: c.animTime) }
             if c.velocityY > 80 { return AnimationLibrary.jumpStretch.sample(at: min(c.animTime, 0.3)) }
             return AnimationLibrary.fallPose.sample(at: c.animTime)
+        }
+        // v6: supervelocidad de TCO = rafaga horizontal (flyDash), no el sprint normal
+        if c.action == .running, c.activePower == .superSpeed {
+            return AnimationLibrary.flyDash.sample(at: c.animTime)
         }
         switch c.action {
         case .walking, .running, .fleeing, .playingBall, .chasingFinger:
