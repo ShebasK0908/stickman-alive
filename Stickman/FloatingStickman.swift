@@ -105,16 +105,43 @@ enum FloatingRenderer {
     }
 
     private static func joints(pose: SkeletonPose, cx: CGFloat, ground: CGFloat, facing: CGFloat) -> Joints {
+        // ESPEJO de StickmanView.jointPoints: escala global 0,8 y
+        // factores de proporcion (torso x1,06, cabeza x1,28) de
+        // ViewTuning — mantener en sync con StickmanView.swift.
+        let fs: CGFloat = 0.8
+        func sp(_ p: CGPoint) -> CGPoint { CGPoint(x: p.x * fs, y: p.y * fs) }
+        let neckOff = CGPoint(x: pose.neckOff.x * fs, y: pose.neckOff.y * 1.06 * fs)
+        let headOff = CGPoint(x: pose.headOff.x * fs, y: pose.headOff.y * 1.28 * fs)
         func fromHip(_ p: CGPoint, hip: CGPoint) -> CGPoint { CGPoint(x: hip.x + p.x * facing, y: hip.y + p.y) }
         func fromNeck(_ p: CGPoint, neck: CGPoint) -> CGPoint { CGPoint(x: neck.x + p.x * facing, y: neck.y + p.y) }
-        let hip = CGPoint(x: cx + pose.hipDX * facing, y: ground - pose.hipHeight)
-        let neck = fromHip(pose.neckOff, hip: hip)
-        let head = fromNeck(pose.headOff, neck: neck)
-        return Joints(hip: hip, neck: neck, head: head,
-                      elbowL: fromNeck(pose.elbowL, neck: neck), handL: fromNeck(pose.handL, neck: neck),
-                      elbowR: fromNeck(pose.elbowR, neck: neck), handR: fromNeck(pose.handR, neck: neck),
-                      kneeL: fromHip(pose.kneeL, hip: hip), footL: fromHip(pose.footL, hip: hip),
-                      kneeR: fromHip(pose.kneeR, hip: hip), footR: fromHip(pose.footR, hip: hip))
+        let hip = CGPoint(x: cx + pose.hipDX * facing * fs, y: ground - pose.hipHeight * fs)
+        let neck = fromHip(neckOff, hip: hip)
+        let head = fromNeck(headOff, neck: neck)
+        var j = Joints(hip: hip, neck: neck, head: head,
+                      elbowL: fromNeck(sp(pose.elbowL), neck: neck), handL: fromNeck(sp(pose.handL), neck: neck),
+                      elbowR: fromNeck(sp(pose.elbowR), neck: neck), handR: fromNeck(sp(pose.handR), neck: neck),
+                      kneeL: fromHip(sp(pose.kneeL), hip: hip), footL: fromHip(sp(pose.footL), hip: hip),
+                      kneeR: fromHip(sp(pose.kneeR), hip: hip), footR: fromHip(sp(pose.footR), hip: hip))
+        // Separacion minima de piernas, espejo de la guarda de
+        // StickmanView.jointPoints (piernas arrastradas juntas que se
+        // funden en una mancha): mismas reglas y umbrales.
+        let torsoTumbado = abs(j.neck.x - j.hip.x) > (j.hip.y - j.neck.y) + 6
+        let piernasCruzadas = (j.footR.x - j.footL.x) * facing < -1 || (j.kneeR.x - j.kneeL.x) * facing < -1
+        if !torsoTumbado && !piernasCruzadas {
+            func separar(_ a: inout CGPoint, _ b: inout CGPoint, hasta minD: CGFloat) {
+                let dx = b.x - a.x, dy = b.y - a.y
+                let d = hypot(dx, dy)
+                guard d < minD else { return }
+                let ux = d > 0.01 ? dx / d : 1
+                let uy = d > 0.01 ? dy / d : 0
+                let push = (minD - d) / 2
+                a = CGPoint(x: a.x - ux * push, y: a.y - uy * push)
+                b = CGPoint(x: b.x + ux * push, y: b.y + uy * push)
+            }
+            separar(&j.kneeL, &j.kneeR, hasta: 11 * fs + 2)
+            separar(&j.footL, &j.footR, hasta: 13 * fs + 2)
+        }
+        return j
     }
 
     static func draw(engine: FloatingSceneEngine, into pixelBuffer: CVPixelBuffer) {
@@ -153,24 +180,60 @@ enum FloatingRenderer {
         if engine.mode == .power {
             let auraAlpha = 0.12 + 0.04 * sin(engine.animTime * 6)
             ctx.setFillColor(CGColor(red: 1.0, green: 0.85, blue: 0.1, alpha: CGFloat(auraAlpha)))
-            ctx.fillEllipse(in: CGRect(x: engine.x - 55, y: ground - 170, width: 110, height: 170))
+            ctx.fillEllipse(in: CGRect(x: engine.x - 55 * 0.8, y: ground - 170 * 0.8, width: 110 * 0.8, height: 170 * 0.8))
         }
 
         // Efectos de poder
         if engine.mode == .power {
             if engine.powerIsFire {
-                let flicker = CGFloat(sin(engine.animTime * 22)) * 9
+                // RONDA 2 · arreglo 2 (espejo de la vista principal):
+                // llama VIVA en capas con la envolvente del clip
+                // firePose y chispas; fuera el triangulo plano.
                 let hand = j.handR
-                let tipX = hand.x + engine.facing * (74 + flicker)
-                let flame = CGMutablePath()
-                flame.move(to: hand)
-                flame.addLine(to: CGPoint(x: tipX, y: hand.y - 15))
-                flame.addLine(to: CGPoint(x: hand.x + engine.facing * 58, y: hand.y + 16))
-                flame.closeSubpath()
-                ctx.setFillColor(CGColor(red: 1.0, green: 0.45, blue: 0.05, alpha: 0.8))
-                ctx.addPath(flame)
-                ctx.fillPath()
+                let clipDur = max(0.1, AnimationLibrary.firePose.duration)
+                let ph = engine.animTime.truncatingRemainder(dividingBy: clipDur) / clipDur
+                var inten = 1.0
+                if ph < 0.36 { inten = 0.30 + 0.70 * (ph / 0.36) }
+                else if ph > 0.82 { inten = max(0.35, 1 - (ph - 0.82) / 0.18 * 0.65) }
+                let fl = 0.88 + 0.12 * sin(engine.animTime * 23) + 0.05 * sin(engine.animTime * 41 + 1.3)
+                let len = CGFloat(76 * inten * fl)
+                let wob = CGFloat(sin(engine.animTime * 29)) * 4 * CGFloat(inten)
+                let axis = CGPoint(x: engine.facing, y: -0.06)
+                let perp = CGPoint(x: -axis.y, y: axis.x)
+                func flameLayer(_ lf: CGFloat, _ wf: CGFloat, _ col: CGColor) {
+                    let L = len * lf
+                    let W: CGFloat = 30 * wf
+                    func pt(_ along: CGFloat, _ side: CGFloat, _ w: CGFloat) -> CGPoint {
+                        CGPoint(x: hand.x + axis.x * along + perp.x * (side + w),
+                                y: hand.y + axis.y * along + perp.y * (side + w))
+                    }
+                    let p = CGMutablePath()
+                    p.move(to: hand)
+                    p.addQuadCurve(to: pt(L, 0, wob * lf), control: pt(L * 0.42, -W / 2, wob * lf * 0.35))
+                    p.addQuadCurve(to: hand, control: pt(L * 0.42, W / 2, wob * lf * 0.35))
+                    p.closeSubpath()
+                    ctx.setFillColor(col)
+                    ctx.addPath(p)
+                    ctx.fillPath()
+                }
+                flameLayer(1.0, 1.0, CGColor(red: 1, green: 0.40, blue: 0.04, alpha: 0.85))
+                flameLayer(0.72, 0.62, CGColor(red: 1, green: 0.70, blue: 0.10, alpha: 0.90))
+                flameLayer(0.45, 0.34, CGColor(red: 1, green: 0.93, blue: 0.55, alpha: 0.95))
+                // Chispas deterministas ligadas al tiempo
+                for i in 0..<6 {
+                    let seed = Double(i) * 0.6180339887
+                    let cycle = (engine.animTime * 1.35 + seed).truncatingRemainder(dividingBy: 1)
+                    let along = len * CGFloat(0.25 + 0.85 * cycle)
+                    let side = CGFloat(sin(seed * 21.7)) * 13 * CGFloat(0.3 + cycle)
+                    let cxp = hand.x + axis.x * along + perp.x * side
+                    let cyp = hand.y + axis.y * along + perp.y * side - CGFloat(cycle) * 6
+                    let r = CGFloat(1.1 + 2.1 * (1 - cycle))
+                    ctx.setFillColor(CGColor(red: 1, green: 0.72, blue: 0.25, alpha: CGFloat((1 - cycle) * 0.9)))
+                    ctx.fillEllipse(in: CGRect(x: cxp - r, y: cyp - r, width: r * 2, height: r * 2))
+                }
             } else {
+                // RONDA 2 · arreglo 3 (espejo): nucleo blanco anadido
+                // y chispas en el extremo del haz.
                 let head = j.head
                 let end = CGPoint(x: head.x + engine.facing * 300, y: head.y + 6 + CGFloat(sin(engine.animTime * 30)) * 2)
                 ctx.setStrokeColor(CGColor(red: 1, green: 0, blue: 0, alpha: 0.30))
@@ -179,6 +242,19 @@ enum FloatingRenderer {
                 ctx.setStrokeColor(CGColor(red: 1, green: 0.1, blue: 0.1, alpha: 0.95))
                 ctx.setLineWidth(4)
                 ctx.move(to: head); ctx.addLine(to: end); ctx.strokePath()
+                ctx.setStrokeColor(CGColor(red: 1, green: 0.98, blue: 0.98, alpha: 0.95))
+                ctx.setLineWidth(1.8)
+                ctx.move(to: head); ctx.addLine(to: end); ctx.strokePath()
+                for i in 0..<6 {
+                    let cycle = (engine.animTime * 2.3 + Double(i) * 0.6180339887).truncatingRemainder(dividingBy: 1)
+                    let ang = Double(i) * 1.047 + sin(Double(i) * 7.3) * 0.45
+                    let slen = CGFloat(5 + 10 * cycle)
+                    ctx.setStrokeColor(CGColor(red: 1, green: 0.72, blue: 0.25, alpha: CGFloat((1 - cycle) * 0.85)))
+                    ctx.setLineWidth(2)
+                    ctx.move(to: end)
+                    ctx.addLine(to: CGPoint(x: end.x + CGFloat(cos(ang)) * slen, y: end.y + CGFloat(sin(ang)) * slen))
+                    ctx.strokePath()
+                }
             }
         }
 
@@ -186,7 +262,8 @@ enum FloatingRenderer {
         // app (cuadratica que pasa por la articulacion, sin angulo duro)
         func limb(_ path: CGMutablePath, _ a: CGPoint, _ joint: CGPoint, _ b: CGPoint) {
             let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
-            let control = CGPoint(x: 2 * joint.x - mid.x, y: 2 * joint.y - mid.y)
+            let pull: CGFloat = 2.0   // espejo de ViewTuning.limbPull (StickmanView): mantener en sync
+            let control = CGPoint(x: mid.x + (joint.x - mid.x) * pull, y: mid.y + (joint.y - mid.y) * pull)
             path.move(to: a); path.addQuadCurve(to: b, control: control)
         }
         let body = CGMutablePath()
@@ -196,18 +273,21 @@ enum FloatingRenderer {
         limb(body, j.neck, j.elbowL, j.handL)
         limb(body, j.neck, j.elbowR, j.handR)
         ctx.setStrokeColor(ink)
-        ctx.setLineWidth(10)
+        ctx.setLineWidth(8)   // 10 x escala 0,8 (espejo de la app)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         ctx.addPath(body)
         ctx.strokePath()
 
         // Cabeza de ANILLO hueco, con el squash AMORTIGUADO (0.93–1.07)
+        // (diametro espejo de ViewTuning.headDiameter en StickmanView,
+        // ya multiplicado por la escala 0,8: 52 x 0,8)
+        let headD: CGFloat = 52 * 0.8
         let sq = min(1.07, max(0.93, pose.squash))
-        let headH = 40 * sq
-        let headW = 40 * (1 + (1 - sq) * 0.55)
+        let headH = headD * sq
+        let headW = headD * (1 + (1 - sq) * 0.55)
         ctx.setStrokeColor(ink)
-        ctx.setLineWidth(9.5)
+        ctx.setLineWidth(8.5 * 0.8)   // espejo de ViewTuning.headStroke x escala
         ctx.strokeEllipse(in: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH))
 
         // "Z" de sueno: tres trazos que suben y se desvanecen (se dibujan
