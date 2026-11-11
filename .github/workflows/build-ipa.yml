@@ -19,7 +19,9 @@ jobs:
         run: xcodebuild -version
 
       - name: Compilar y empaquetar el .ipa
-        run: ./build.sh
+        run: |
+          chmod +x build.sh package-ipa.sh
+          ./build.sh
 
       - name: Subir el .ipa como artifact
         uses: actions/upload-artifact@v4
