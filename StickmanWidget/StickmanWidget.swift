@@ -4,9 +4,9 @@ import AppIntents
 
 // MARK: - Widget de pantalla de inicio — v5
 //
-// The Chosen One vive en la pantalla de inicio. Dibujo 100% procedural
-// con SwiftUI Canvas (mismas proporciones y cabeza llena que en la app:
-// cadera a 56, cuello a -42, cabeza a -23, cabeza solida de 40).
+// The Second Coming vive en la pantalla de inicio. Dibujo 100% procedural
+// con SwiftUI Canvas (mismas proporciones y cabeza de anillo que en la app:
+// cadera a 56, cuello a -42, cabeza a -23, cabeza de anillo de 40).
 //
 // Las poses ROTAN por la timeline (de pie, caminando, sentado,
 // durmiendo, pose de poder) y los botones (iOS 17+, App Intents)
@@ -28,7 +28,7 @@ enum WidgetPoseKind: String, CaseIterable {
         case .walking: return "De paseo por tu pantalla"
         case .sitting: return "Sentado en el borde"
         case .sleeping: return "Durmiendo... no molestar"
-        case .power: return "¡Modo Chosen One!"
+        case .power: return "¡Modo Second Coming!"
         case .wave: return "¡Hola, animador!"
         case .running: return "¡A correr!"
         case .fire: return "¡Fuego!"
@@ -161,20 +161,20 @@ private struct StickmanCanvas: View {
                 fctx.fill(flame, with: .color(.orange))
             }
 
-            let ink = Color(red: 0.07, green: 0.07, blue: 0.07)
+            let ink = Color(red: 0.945, green: 0.506, blue: 0.047)
             var body = Path()
             body.move(to: hip); body.addLine(to: neck)
             body.move(to: hip); body.addLine(to: kneeL); body.addLine(to: footL)
             body.move(to: hip); body.addLine(to: kneeR); body.addLine(to: footR)
             body.move(to: neck); body.addLine(to: elbowL); body.addLine(to: handL)
             body.move(to: neck); body.addLine(to: elbowR); body.addLine(to: handR)
-            ctx.stroke(body, with: .color(ink), style: StrokeStyle(lineWidth: 6.5, lineCap: .round, lineJoin: .round))
+            ctx.stroke(body, with: .color(ink), style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
 
-            // Cabeza llena, como en la app
+            // Cabeza de anillo hueco, como en la app
             let headH = 40 * pose.squash
             let headW = 40 * (1 + (1 - pose.squash) * 0.55)
-            ctx.fill(Path(ellipseIn: CGRect(x: head.x - headW / 2, y: head.y - headH / 2, width: headW, height: headH)),
-                     with: .color(ink))
+            ctx.stroke(Path(ellipseIn: CGRect(x: head.x - headW / 2, y: head.y - headH / 2, width: headW, height: headH)),
+                       with: .color(ink), lineWidth: 9.5)
         }
     }
 }
@@ -239,7 +239,7 @@ enum PoseOption: String, AppEnum {
 }
 
 struct SetPoseIntent: AppIntent {
-    static var title: LocalizedStringResource = "Cambiar la pose de The Chosen One"
+    static var title: LocalizedStringResource = "Cambiar la pose de The Second Coming"
 
     @Parameter(title: "Pose") var pose: PoseOption
 
@@ -268,7 +268,7 @@ struct StickmanWidgetEntryView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 if family == .systemMedium {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("The Chosen One")
+                        Text("The Second Coming")
                             .font(.headline)
                             .lineLimit(1)
                         Text(entry.pose.caption)
@@ -316,7 +316,7 @@ struct StickmanWidget: Widget {
         StaticConfiguration(kind: "StickmanWidget", provider: StickmanProvider()) { entry in
             StickmanWidgetEntryView(entry: entry)
         }
-        .configurationDisplayName("The Chosen One")
+        .configurationDisplayName("The Second Coming")
         .description("Tu stickman vive en la pantalla de inicio: rota de poses y responde a los botones.")
         .supportedFamilies([.systemMedium, .systemSmall])
     }
