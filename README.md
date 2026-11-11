@@ -8,6 +8,125 @@ externos: todo se dibuja y se anima por código.
 
 Bundle ID: `dev.stickman.alive` · Mínimo: iOS 16.0 · Sin firmar (para SideStore).
 
+## v3 — DOS personajes y roaming 360° (ejemplo Shimeji superado)
+
+El usuario envió como ejemplo un Shimeji-ee fan de Alan Becker (9
+personajes, 1.328 frames PNG, 51 behaviors) y pidió: *el catálogo entero
+en SOLO dos personajes — The Chosen One y Victim — y mejor que el
+ejemplo*. La v3 lo recrea con poses procedurales (sin copiar ni un PNG)
+y le añade lo que el ejemplo no tiene: poderes reales, dibujo que cobra
+vida, IA de defensa y cerebro complejo por personaje.
+
+**Los dos personajes** (cada uno con su controlador, cerebro, impulsos
+y memoria; instancias parametrizadas de la arquitectura v2):
+
+- **The Chosen One** — negro, trazo más grueso. Poderoso y desafiante:
+  travesura y energía altas. Es el ÚNICO con poderes (los de la v2:
+  volar, fuego, láser, hielo, superpuñetazo, superfuerza, supervelocidad,
+  crear/destruir) y con Modo Chosen One.
+- **Victim** — gris oscuro, el dibujado del AvA 1. Nervioso y
+  reivindicativo contra el animador (enfado base, menos sociable).
+  Repertorio propio recreado de la spec: **SpinLasso** (gira el lazo
+  sobre la cabeza, dibujado en Canvas), **CursorSetup + Stabbing** (se
+  coloca junto a "su" cursor y lo apuñala) y **SitWhileWorking**
+  (sentarse «a trabajar» picando un papel). Cuando TCO usa un poder
+  delante de él, reacciona: se asusta y retrocede, se esconde tras un
+  objeto o le planta cara con el lazo. Cuando Victim provoca (lazo /
+  apuñalar), TCO se ríe o bloquea, sobrado.
+
+**Sistema de superficies (el motor manda, como en la spec):** cada
+personaje está anclado a una superficie (`StickSurface`): `floor`
+(suelo sobre la timeline, plataformas falsas de la interfaz y trazos
+del usuario, como en la v2), `wallLeft` / `wallRight` (paredes del
+lienzo) y `ceiling` (techo). La gravedad depende de la superficie:
+trepar sube a velocidad constante anclado a la pared; en el techo
+camina **boca abajo** con el ciclo *swing* (la vista lo dibuja
+invertido, ancla en el borde superior); descolgarse de pared o techo
+(`dropping`) devuelve el control a la física normal y cae al suelo con
+aterrizaje/rodar/mareo según impacto. Transiciones de esquina:
+suelo→pared (llega caminando y hace PullUp al anclarse), pared→techo
+(al coronar pasa solo a caminar boca abajo), techo→pared (al llegar al
+borde baja trepando), techo/pared→suelo (descolgarse). Sin plan en una
+superficie, un «autopiloto» de superficie decide: seguir trepando,
+caminar por el techo o descolgarse. La parte superior de la toolbar y
+la timeline se representan con el sistema de plataformas de la v2
+(46/104) y los bordes de esas plataformas son donde se sienta con las
+piernas colgando (`dangling`, con el ciclo de balanceo de tiempos
+irregulares de la spec, patrón 8/2/5).
+
+**Timing como la spec:** la zancada se lee en el espacio (la fase de
+zancada va ligada a la velocidad real desde la v2: correr avanza
+≈4,5× por ciclo que caminar con duración parecida), duraciones
+irregulares a propósito en esperas/colgaduras/piernas colgando,
+tropiezos con pose larga de suelo, y caídas desde el techo con poses
+largas de caída.
+
+**Social entre los dos (affordances de la spec):** *HugSearch* es el
+plan social con más peso (en la spec, Freq 1000, el mayor del
+catálogo): corre hacia el otro y le abraza, y el otro pasa al rol
+espejo *Hugged*; *HugAffordance* (ofrecerse con los brazos abiertos);
+perseguirse (*Chase* del otro) y acabar en **sparring** de broma con
+los clips de pelea (el otro responde peleando o huyendo entre risas);
+**robarse la herramienta** (el robado se enfada con pisotón o se ríe);
+**sentarse juntos** en un borde; y separación suave para que no se
+solapen. Descansos cada 2 min por personaje: si uno descansa, el otro
+puede **unirse al descanso** en unos segundos o ir a **sentarse a su
+lado** (o seguir a la suya).
+
+**Interacción con el dedo, para AMBOS:** *ChaseMouse* — si el dedo
+está a media distancia y sin violencia, lo persiguen corriendo (Victim
+con más ganas: es «su» cursor) y al llegar se sientan a mirarlo
+(*SitAndFaceMouse*, girándose hacia el dedo); en la persecución pueden
+**tropezar** (*Trip*); *Dragged* con pose **pinch inclinada hacia el
+lado del tirón** (como las 7 variantes −50…+50 px de la spec); *Thrown*
+y toda la IA de defensa de la v2, ahora por personaje (cada uno con su
+contador de acoso: el panel 🧠 muestra los dos cerebros lado a lado).
+El gesto del lienzo agarra/toca al personaje **más cercano** al dedo;
+los trazos del lápiz se aplican a los dos (copias idénticas, físicas
+para ambos).
+
+### Behaviors de la spec: implementados y fuera (honesto)
+
+Implementados (51 del catálogo, adaptados): ChaseMouse,
+SitAndFaceMouse, Dragged (pinch por lado), Thrown, Fall, Trip,
+WalkAlong/RunAlongFloor, WalkAndSit (planes caminar→sentarse),
+GrabBottomWall + RunAndGrabWall (llegar a la esquina y anclarse),
+HoldOntoWall, FallFromWall, ClimbHalfwayAlongWall, ClimbAlongWall,
+HoldOntoCeiling, FallFromCeiling, ClimbAlongCeiling (swing boca
+abajo), segundo «suelo» elevado y vida sobre él (plataformas
+timeline/botones: caminar, sentarse en sus bordes, piernas colgando),
+StandUp, SitDown, SitWhileDanglingLegs, LieDown, Dance (en la spec
+TCO/Victim no lo tienen; aquí lo reciben los dos, como pidió el
+usuario), HugAffordance, HugSearch, HuggingSolid, HuggedSolid,
+SpinLasso, Stabbing, CursorSetup/CursorHate, SitWhileWorking,
+PullUp (al borde y al anclarse a la pared).
+
+Adaptaciones y lo que queda fuera, y por qué:
+
+- **Familia «IE» (ventana activa del escritorio):** en un iPhone no hay
+  ventanas; su equivalente en escena son las plataformas de la interfaz
+  (timeline y botones), que ya actúan como segundo suelo con bordes
+  donde sentarse y desde donde saltar. `ClimbIEBottom` (boca abajo por
+  el borde *inferior* de una ventana) no tiene equivalente físico en la
+  escena y **no** se implementa como tal; el desplazamiento boca abajo
+  sí existe, pero en el techo (`ClimbAlongCeiling`).
+- **PullUpShimeji / Breed (invocar/multiplicar personajes):** fuera a
+  propósito — la escena tiene exactamente dos personajes por decisión
+  del usuario, no una población de hasta 50.
+- **`couch`:** era un set decorativo de 1 frame sin behavior propio;
+  su función (descanso «en casa») la cubren la silla dibujada y el
+  descanso obligatorio.
+- El agarre a pared en plena caída (`GrabWall` dentro de Thrown) se
+  aproxima con el deslizado por la pared de la v2, no con anclaje
+  completo a media caída.
+
+Se mantiene TODO lo de la v2: toolbar real con modos
+cursor/lápiz/goma, trazos persistentes y físicos, dibujo que cobra
+vida (objetos y criaturas de AvA4), cerebro complejo con impulsos,
+memoria y planes por personaje, IA de defensa, y descanso obligatorio
+cada 2 minutos. Sin archivos nuevos: la v3 evoluciona los 7 ficheros
+Swift existentes, así que el `project.pbxproj` no cambia.
+
 ## v2 — qué se corrigió tras probar la v1 en el iPhone
 
 Feedback real del usuario: *«No me deja interactuar con los botones o
@@ -208,18 +327,26 @@ sin marcadores sin sustituir).
 
 - `Stickman/StickmanApp.swift` — Punto de entrada `@main`.
 - `Stickman/ContentView.swift` — La escena/programa de animación falso,
-  gestos táctiles, consola falsa de «Darle vida», barra de sugerencias y
-  panel 🧠.
-- `Stickman/StickmanBrain.swift` — El cerebro: `Perception`, `Drives`,
-  `Emotion`, `ShortMemory`, `Plan`/`PlanStep` y `PlanLibrary`.
-- `Stickman/StickmanEngine.swift` — `StickmanController`: física
-  (gravedad, saltos, lanzamientos), ejecutor de planes, ciclo de descanso
-  de 120 s, reacciones al dedo y sugerencias con probabilidad de obediencia.
+  gestos táctiles (agarre/toque al personaje más cercano), consola falsa
+  de «Darles vida», barra de sugerencias y panel 🧠 doble (v3).
+- `Stickman/StickmanBrain.swift` — El cerebro: `CharacterKind` (TCO /
+  Victim) y `StickSurface` (v3), `Perception`, `Drives`, `Emotion`,
+  `ShortMemory`, `Plan`/`PlanStep` (con destino x / compañero /
+  superficie) y `PlanLibrary` (planes v2 + roaming 360 + sociales +
+  únicos de Victim).
+- `Stickman/StickmanEngine.swift` — `StickmanController` (una instancia
+  por personaje): física (gravedad, saltos, lanzamientos), motor de
+  superficies 360°, ejecutor de planes, ciclo de descanso de 120 s,
+  reacciones al dedo y al compañero, y sugerencias con probabilidad de
+  obediencia.
 - `Stickman/StickmanPowers.swift` — `enum Power`, objetos dibujados
   (`DrawnObject`) y el `ParticleSystem`.
-- `Stickman/StickmanView.swift` — Dibujo procedural en Canvas: esqueleto
-  articulado, poses por acción/poder, objetos, amigo, aura, fantasmas,
+- `Stickman/StickmanView.swift` — Dibujo procedural en Canvas por
+  personaje: esqueleto articulado, poses por acción/poder, inversión en
+  el techo, lazo y cursor de Victim, objetos, amigo, aura, fantasmas,
   láser/fuego/hielo y partículas.
+- `Stickman/StickmanAnimation.swift` — Clips de keyframes (v2 + v3:
+  superficies, abrazos, lazo, stab, trabajo, dangle irregular…).
 - `Stickman/Info.plist`, `Stickman/Assets.xcassets` — Configuración e icono
   (catálogo vacío: la app compila sin icono personalizado).
 - `Stickman.xcodeproj` — Proyecto Xcode (iOS 16.0, Swift 5).
