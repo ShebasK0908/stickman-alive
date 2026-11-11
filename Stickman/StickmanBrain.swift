@@ -4,12 +4,51 @@ import SwiftUI
 // MARK: - Cerebro complejo del stickman
 //
 // Arquitectura (ver README):
-//   Percepcion  -> lee dedo/cursor, objetos vivos, interfaz, tiempo sin interaccion
+//   Percepcion  -> lee dedo/cursor (posicion, velocidad, acercamiento),
+//                  objetos vivos, interfaz, tiempo sin interaccion
 //   Impulsos    -> 7 dimensiones que evolucionan y COMPITEN entre si
 //   Emocion     -> se deriva de los impulsos + memoria corta
+//   IA tactil   -> percibe -> decide -> anima: curiosidad, saludo, huida,
+//                  esquiva, bloqueo, agarrar el dedo, contraataque,
+//                  esconderse, usar objetos como escudo/arma
 //   Planificador-> construye planes multi-paso (cola de pasos)
 //   Descanso    -> ciclo obligatorio: 120 s de actividad -> 15-20 s de descanso
-// El controlador (StickmanEngine) ejecuta el plan paso a paso con la fisica.
+// El controlador (StickmanEngine) ejecuta todo esto con el motor de
+// locomocion y los clips de StickmanAnimation.
+
+// MARK: Herramientas del usuario (toolbar real de la v2)
+
+enum ToolMode: String, CaseIterable {
+    case cursor, pencil, eraser
+    var label: String {
+        switch self {
+        case .cursor: return "Cursor"
+        case .pencil: return "Lápiz"
+        case .eraser: return "Goma"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .cursor: return "cursorarrow"
+        case .pencil: return "pencil"
+        case .eraser: return "eraser"
+        }
+    }
+    var hint: String {
+        switch self {
+        case .cursor: return "Modo: Cursor — agarra al stickman, arrástralo o tócalo"
+        case .pencil: return "Modo: Lápiz — dibuja con el dedo en el lienzo"
+        case .eraser: return "Modo: Goma — arrastra sobre trazos u objetos para borrarlos"
+        }
+    }
+}
+
+/// Un trazo libre dibujado por el USUARIO con el lapiz.
+/// Puntos en coordenadas de mundo: x = horizontal, y = altura sobre el suelo.
+struct UserStroke: Identifiable {
+    let id = UUID()
+    var points: [CGPoint] = []
+}
 
 // MARK: Percepcion
 
@@ -21,6 +60,144 @@ struct Perception {
     var reachableUI: [String] = ["toolbar", "timeline", "botones", "lienzo"]
     var stickmanX: CGFloat = 0
     var stageWidth: CGFloat = 390
+}
+
+// MARK: Percepcion del dedo (para la IA de interaccion/defensa)
+
+struct FingerTracker {
+    private(set) var present: Bool = false
+    private(set) var point: CGPoint = .zero        // y = altura sobre el suelo
+    private(set) var speed: CGFloat = 0            // pt/s (suavizada)
+    private(set) var approachSpeed: CGFloat = 0    // pt/s acortando distancia al stickman (>0 = se acerca)
+    private var lastPoint: CGPoint? = nil
+    private var lastTime: Double = 0
+    private var lastDistance: CGFloat? = nil
+
+    mutating func update(point newPoint: CGPoint, stickmanX: CGFloat, stickmanHeight: CGFloat, now: Double) {
+        present = true
+        point = newPoint
+        let dist = hypot(newPoint.x - stickmanX, newPoint.y - stickmanHeight)
+        if let lp = lastPoint, now > lastTime {
+            let dt = now - lastTime
+            let v = hypot(newPoint.x - lp.x, newPoint.y - lp.y) / CGFloat(dt)
+            speed = speed * 0.55 + v * 0.45
+            if let ld = lastDistance {
+                let closing = (ld - dist) / CGFloat(dt)
+                approachSpeed = approachSpeed * 0.55 + closing * 0.45
+            }
+        }
+        lastPoint = newPoint; lastTime = now; lastDistance = dist
+    }
+
+    mutating func release(now: Double) {
+        present = false
+        lastPoint = nil; lastDistance = nil
+        speed = 0; approachSpeed = 0
+        lastTime = now
+    }
+
+    func distance(toStickmanX sx: CGFloat, height: CGFloat) -> CGFloat {
+        hypot(point.x - sx, point.y - height)
+    }
+    /// El dedo baja "a por el" si esta por encima y descendiendo hacia su cabeza/cuerpo
+    var isDescendingOntoHim: Bool { present && point.y > 90 }
+}
+
+// MARK: Decisiones de la IA tactil
+
+enum InteractionDecision: String {
+    case none = "—"
+    case curious = "acercarse curioso"
+    case greet = "saludar"
+    case flee = "huir corriendo"
+    case dodgeDuck = "esquivar agachándose"
+    case dodgeRoll = "esquivar rodando"
+    case jumpOver = "saltar por encima del dedo"
+    case block = "bloquear"
+    case grabFinger = "agarrar el dedo"
+    case counterAttack = "contraatacar"
+    case miniChosen = "mini Chosen One"
+    case hide = "esconderse"
+    case shield = "usar objeto como escudo/arma"
+
+    var thought: String {
+        switch self {
+        case .none: return ""
+        case .curious: return "¿qué quieres?"
+        case .greet: return "¡hola!"
+        case .flee: return "¡a mí no me pillas!"
+        case .dodgeDuck: return "¡eh!"
+        case .dodgeRoll: return "¡no me atrapas!"
+        case .jumpOver: return "¡por encima!"
+        case .block: return "¡eh! ¡para!"
+        case .grabFinger: return "¡te tengo, dedo!"
+        case .counterAttack: return "¡toma! ¡y toma!"
+        case .miniChosen: return "¡YA ESTÁ BIEN!"
+        case .hide: return "aquí no me ves..."
+        case .shield: return "¡con mi escudo!"
+        }
+    }
+}
+
+/// Cerebro tactil: puntua la amenaza y elige reaccion.
+/// Amistoso = lento y un solo toque. Hostil = rapido, persiguiendo, agarrando.
+struct InteractionBrain {
+    /// 0...100: sube con acoso (agarres, persecucion, toques bruscos) y decae con calma o juego suave.
+    var harassment: Double = 0
+    var grabAttempts: Int = 0
+    private var lastGrabTime: Double = -10
+
+    mutating func registerGrabAttempt(now: Double) {
+        if now - lastGrabTime < 6 { grabAttempts += 1 } else { grabAttempts = 1 }
+        lastGrabTime = now
+        harassment = min(100, harassment + 16)
+    }
+    mutating func registerFastApproach() { harassment = min(100, harassment + 7) }
+    mutating func registerRoughTap() { harassment = min(100, harassment + 9) }
+    mutating func registerKindness() { harassment = max(0, harassment - 22); grabAttempts = 0 }
+    mutating func tick(dt: Double, fingerPresent: Bool) {
+        // Con calma decae; si el dedo esta encima, decae mas despacio
+        harassment = max(0, harassment - dt * (fingerPresent ? 2.5 : 7.0))
+        if harassment < 20 { grabAttempts = 0 }
+    }
+
+    /// Decide en tiempo real. `energy` baja favorece esconderse; sociabilidad alta, saludar.
+    func decide(finger: FingerTracker, stickmanX: CGFloat, stickmanHeight: CGFloat,
+                drives: Drives, hasShieldObject: Bool, hasHidingSpot: Bool) -> InteractionDecision {
+        guard finger.present else { return .none }
+        let dist = finger.distance(toStickmanX: stickmanX, height: stickmanHeight)
+        let fast = finger.speed > 340
+        let closingFast = finger.approachSpeed > 240
+
+        // Muy cerca y viniendo rapido: defensa inmediata, escala con el acoso
+        if dist < 74 && (closingFast || fast) {
+            if harassment > 78 { return .miniChosen }
+            if harassment > 52 { return .counterAttack }
+            if hasShieldObject && harassment > 30 { return .shield }
+            if drives.energy < 30 && hasHidingSpot { return .hide }
+            // Esquiva variada: agacharse, rodar o saltar por encima
+            switch (Int(harassment) + Int(dist)) % 3 {
+            case 0: return .dodgeDuck
+            case 1: return .dodgeRoll
+            default: return .jumpOver
+            }
+        }
+        // Le han intentado agarrar varias veces seguidas: forcejea / contraataca
+        if dist < 96 && grabAttempts >= 2 {
+            return harassment > 60 ? .counterAttack : .grabFinger
+        }
+        // Cerca pero sin violencia: guardia si hay acoso previo, si no curiosidad
+        if dist < 110 {
+            if harassment > 38 { return .block }
+            if fast { return .flee }
+            return drives.sociability > 45 ? .greet : .curious
+        }
+        // A media distancia acercandose rapido: se prepara / huye si ya hay acoso
+        if dist < 190 && closingFast {
+            return harassment > 30 ? .flee : .block
+        }
+        return .none
+    }
 }
 
 // MARK: Impulsos
@@ -122,8 +299,8 @@ struct Plan {
 enum PlanLibrary {
     static func buildCorner() -> Plan {
         Plan(name: "Construir mi rincón", steps: [
-            PlanStep(action: .drawingObject, duration: 1.2, thought: "voy a hacerme un rincón", objectToDraw: .chair),
-            PlanStep(action: .drawingObject, duration: 1.2, thought: "", objectToDraw: .table),
+            PlanStep(action: .drawingObject, duration: 1.4, thought: "voy a hacerme un rincón", objectToDraw: .chair),
+            PlanStep(action: .drawingObject, duration: 1.4, thought: "", objectToDraw: .table),
             PlanStep(action: .walking, duration: 1.4, thought: ""),
             PlanStep(action: .sitting, duration: 4.0, thought: "así, cómodo")
         ])
@@ -140,26 +317,41 @@ enum PlanLibrary {
     }
     static func playBall() -> Plan {
         Plan(name: "Jugar con mi pelota", steps: [
-            PlanStep(action: .drawingObject, duration: 1.1, thought: "me dibujo una pelota", objectToDraw: .ball),
+            PlanStep(action: .drawingObject, duration: 1.3, thought: "me dibujo una pelota", objectToDraw: .ball),
             PlanStep(action: .playingBall, duration: 5.0, thought: "¡a jugar solo!")
         ])
     }
     static func drawFriend() -> Plan {
         Plan(name: "Dibujar un amigo", steps: [
-            PlanStep(action: .drawingObject, duration: 1.6, thought: "quiero un amigo", objectToDraw: .friend),
+            PlanStep(action: .drawingObject, duration: 1.8, thought: "quiero un amigo", objectToDraw: .friend),
             PlanStep(action: .withFriend, duration: 4.5, thought: "¡hola, amigo!")
+        ])
+    }
+    static func drawCreature() -> Plan {
+        let kind: DrawnObjectKind = Bool.random() ? .bird : .dog
+        return Plan(name: kind == .bird ? "Dibujar un pajarito" : "Dibujar un perrito", steps: [
+            PlanStep(action: .drawingObject, duration: 1.8, thought: kind == .bird ? "dibujo un pajarito..." : "dibujo un perrito...", objectToDraw: kind),
+            PlanStep(action: .withFriend, duration: 5.0, thought: "¡ha cobrado vida!"),
+            PlanStep(action: .celebrating, duration: 1.6, thought: "")
         ])
     }
     static func buildHouse() -> Plan {
         Plan(name: "Mi puertita", steps: [
-            PlanStep(action: .drawingObject, duration: 1.5, thought: "una puertita para mí", objectToDraw: .doorHouse),
+            PlanStep(action: .drawingObject, duration: 1.7, thought: "una puertita para mí", objectToDraw: .doorHouse),
+            PlanStep(action: .hammering, duration: 1.8, thought: "y unos clavos", objectToDraw: .hammer),
             PlanStep(action: .proud, duration: 2.0, thought: "mi casa"),
             PlanStep(action: .walking, duration: 1.2, thought: "")
         ])
     }
+    static func drawSwordAndFence() -> Plan {
+        Plan(name: "Esgrima", steps: [
+            PlanStep(action: .drawingObject, duration: 1.4, thought: "me dibujo una espada", objectToDraw: .sword),
+            PlanStep(action: .sword, duration: 4.4, thought: "¡en guardia!")
+        ])
+    }
     static func trainChosenOne() -> Plan {
         Plan(name: "Entrenar como Chosen One", steps: [
-            PlanStep(action: .powerPose, duration: 1.4, thought: "modo Chosen One...", power: nil),
+            PlanStep(action: .powerPose, duration: 1.5, thought: "modo Chosen One...", power: nil),
             PlanStep(action: .flying, duration: 3.0, thought: "¡a volar!", power: .flight),
             PlanStep(action: .usingPower, duration: 2.0, thought: "¡láser!", power: .eyeLaser),
             PlanStep(action: .usingPower, duration: 2.0, thought: "¡fuego!", power: .fireBreath),
@@ -185,14 +377,23 @@ enum PlanLibrary {
     static func boredRoutine() -> Plan {
         Plan(name: "Rutina de aburrimiento", steps: [
             PlanStep(action: .yawning, duration: 1.6, thought: "qué aburrimiento..."),
-            PlanStep(action: .drawingObject, duration: 1.1, thought: "", objectToDraw: .chair),
+            PlanStep(action: .drawingObject, duration: 1.3, thought: "", objectToDraw: .chair),
             PlanStep(action: .sitting, duration: 4.0, thought: "me siento un rato")
         ])
     }
     static func happyRoutine() -> Plan {
         Plan(name: "Está contento", steps: [
             PlanStep(action: .waving, duration: 2.0, thought: "¡hola!"),
-            PlanStep(action: .dancing, duration: 3.4, thought: "♪ a bailar ♪")
+            PlanStep(action: .dancing, duration: 3.4, thought: "♪ a bailar ♪"),
+            PlanStep(action: .celebrating, duration: 1.6, thought: ""),
+            PlanStep(action: .laughing, duration: 1.8, thought: "¡ja, ja!")
+        ])
+    }
+    static func moodyRoutine() -> Plan {
+        Plan(name: "Está molesto", steps: [
+            PlanStep(action: .stomping, duration: 2.2, thought: "¡grr!"),
+            PlanStep(action: .shrugging, duration: 1.2, thought: "yo paso"),
+            PlanStep(action: .walking, duration: 1.8, thought: "me voy por ahí")
         ])
     }
 
@@ -202,11 +403,14 @@ enum PlanLibrary {
         candidates.append((weight: 18 + drives.curiosity * 0.5, plan: exploreUI()))
         candidates.append((weight: 14 + drives.playfulness * 0.5, plan: playBall()))
         candidates.append((weight: 10 + drives.sociability * 0.55 + Double(memory.kindPlays) * 4, plan: drawFriend()))
+        candidates.append((weight: 12 + drives.sociability * 0.25, plan: drawCreature()))
         candidates.append((weight: 12, plan: buildCorner()))
         candidates.append((weight: 9, plan: buildHouse()))
+        candidates.append((weight: 8, plan: drawSwordAndFence()))
         candidates.append((weight: 10 + drives.curiosity * 0.3, plan: wander()))
         if drives.boredom > 55 { candidates.append((weight: 26, plan: boredRoutine())) }
         if drives.playfulness > 58 || drives.sociability > 62 { candidates.append((weight: 22, plan: happyRoutine())) }
+        if drives.anger > 48 { candidates.append((weight: 20 + drives.anger * 0.3, plan: moodyRoutine())) }
         // Poderes: travesura / enfado / memoria de molestias -> Chosen One
         let powerWeight = drives.mischief * 0.45 + drives.anger * 0.6 + Double(memory.annoyances) * 7
         if powerWeight > 24 {

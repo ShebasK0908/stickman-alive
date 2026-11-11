@@ -4,17 +4,24 @@ import SwiftUI
 // MARK: - Acciones del stickman (estados autonomos y reactivos)
 
 enum StickmanAction: String, CaseIterable {
-    case drawn, awakening, idle, walking, running, jumping, dancing, waving
-    case sitting, sword, fighting, scared, thrown, sleeping
+    case drawn, awakening, idle, walking, running, fleeing, jumping, landing, rolling, dizzy
+    case dancing, waving, sitting, sword, hammering, fighting, blocking, dodging
+    case grabbingFinger, grabbed, escaping, squashed, scared, thrown, sleeping
     case climbing      // Trepa por la interfaz (timeline / botones)
     case usingTool     // Curiosear / robar una herramienta de la toolbar
-    case drawingObject // Dibujando un objeto propio
+    case drawingObject // Dibujando un objeto propio (con el lapiz grande, como en los videos)
     case playingBall   // Jugando solo con su pelota
-    case withFriend    // Interactuando con el amigo que ha dibujado
+    case withFriend    // Interactuando con el amigo/criatura que ha dibujado
     case yawning       // Bosteza de aburrimiento
     case resting       // Descanso obligatorio (ciclo de 2 min)
     case denying       // Niega con la cabeza: no obedece la sugerencia
     case proud         // Orgulloso, pecho fuera
+    case laughing      // Se rie (hombros temblando)
+    case celebrating   // Salto con brazos arriba
+    case stomping      // Enfadado: pisoton y brazos cruzados
+    case shrugging     // Se encoge de hombros
+    case thumbsUp      // Pulgar arriba
+    case hiding        // Escondido tras un objeto/interfaz
     case powerPose     // Pose de poder: entra el Modo Chosen One
     case flying        // Volando con estela
     case usingPower    // Usando el poder activo (ver activePower)
@@ -26,12 +33,23 @@ enum StickmanAction: String, CaseIterable {
         case .idle: return ""
         case .walking: return ""
         case .running: return "¡a correr!"
+        case .fleeing: return "¡a mí no me pillas!"
         case .jumping: return "¡yupiii!"
+        case .landing: return ""
+        case .rolling: return "¡no me atrapas!"
+        case .dizzy: return "todo da vueltas..."
         case .dancing: return "♪ ♫ ♪"
         case .waving: return "¡hola, animador!"
         case .sitting: return ""
         case .sword: return "¡en guardia!"
+        case .hammering: return "clavo, clavo..."
         case .fighting: return "¡ven aquí, dedo!"
+        case .blocking: return "¡eh! ¡para!"
+        case .dodging: return "¡eh!"
+        case .grabbingFinger: return "¡te tengo, dedo!"
+        case .grabbed: return "¡suéltame!"
+        case .escaping: return "¡me escapo!"
+        case .squashed: return "¡auch!"
         case .scared: return "¡eh! ¡cuidado!"
         case .thrown: return "¡aaaaah!"
         case .sleeping: return "zzz..."
@@ -44,6 +62,12 @@ enum StickmanAction: String, CaseIterable {
         case .resting: return "descanso..."
         case .denying: return "no, ahora no"
         case .proud: return ""
+        case .laughing: return "¡ja, ja, ja!"
+        case .celebrating: return "¡sí!"
+        case .stomping: return "¡grr!"
+        case .shrugging: return "yo qué sé"
+        case .thumbsUp: return "¡bien!"
+        case .hiding: return "aquí no me ves..."
         case .powerPose: return "modo Chosen One..."
         case .flying: return "¡a volaaar!"
         case .usingPower: return ""
@@ -51,7 +75,19 @@ enum StickmanAction: String, CaseIterable {
     }
 }
 
-// MARK: - Controlador: fisica + ejecutor del cerebro
+// MARK: - Controlador v2
+//
+// Novedades frente a la v1:
+//  * LOCOMOCION reescrita: velocidad con aceleracion/frenada, fase de
+//    zancada ligada a la velocidad real, derrape al parar o girar en
+//    seco, giro con paso cruzado, aterrizajes con rodar/mareo segun
+//    impacto, deslizarse por la pared. Nada de "x += velocidad fija".
+//  * IA TACTIL (StickmanBrain.InteractionBrain + FingerTracker):
+//    percibe el dedo (distancia, velocidad, acercamiento) -> decide
+//    (curioso, saludar, huir, esquivar, bloquear, agarrar el dedo,
+//    contraatacar, mini-Chosen, esconderse, escudo) -> ejecuta el clip.
+//  * HERRAMIENTAS DEL USUARIO reales: modos cursor/lapiz/goma; los
+//    trazos del lapiz son persistentes y FISICOS (puede subirse a ellos).
 
 final class StickmanController: ObservableObject {
 
@@ -64,6 +100,30 @@ final class StickmanController: ObservableObject {
     @Published var facing: CGFloat = 1
     @Published var phase: Double = 0
     @Published var swordProgress: Double = 0
+
+    // Locomocion (publicado para que la vista elija/blende clips)
+    @Published var moveSpeed: CGFloat = 0           // velocidad horizontal actual (pt/s, >=0)
+    @Published var gaitPhase01: Double = 0          // fase del ciclo de zancada 0..1
+    @Published var isSkidding: Bool = false
+    @Published var skidElapsed: Double = 0
+    @Published var isTurning: Bool = false
+    @Published var turnElapsed: Double = 0
+    @Published var isWallSliding: Bool = false
+    @Published var velocityY: CGFloat = 0
+    @Published var animTime: Double = 0             // tiempo en la accion actual (para los clips)
+    @Published var isJumpWindingUp: Bool = false
+
+    // IA tactil (visible en el panel)
+    @Published var lastDecision: String = "—"
+    @Published var harassmentLevel: Double = 0
+    @Published var hidingObjectID: UUID? = nil
+    @Published var shieldKind: DrawnObjectKind? = nil
+    @Published var isGrabbingFinger: Bool = false
+
+    // Herramientas del usuario
+    @Published var toolMode: ToolMode = .cursor
+    @Published var userStrokes: [UserStroke] = []
+    @Published var currentStroke: UserStroke? = nil
 
     // Cerebro (publicado para el panel de estado interno)
     @Published var drives = Drives()
@@ -89,6 +149,8 @@ final class StickmanController: ObservableObject {
     private var particleSystem = ParticleSystem()
     private var memory = ShortMemory()
     private var perception = Perception()
+    private var fingerTracker = FingerTracker()
+    private var interactionBrain = InteractionBrain()
     private var plan: Plan? = nil
     private var pausedPlan: Plan? = nil
     private var planStepStarted = false
@@ -98,10 +160,8 @@ final class StickmanController: ObservableObject {
     private var mode: Mode = .plan
     private var overrideTimer: Double = 0
 
-    private var velocityY: CGFloat = 0
     private var velocityX: CGFloat = 0
     private let gravity: CGFloat = 1500
-    private let walkSpeed: CGFloat = 58
 
     private var thoughtTimer: Double = 0
     private var microTimer: Double = 0
@@ -112,12 +172,47 @@ final class StickmanController: ObservableObject {
     private var elapsed: Double = 0
     private var lastWidth: CGFloat = 390
 
+    // Locomocion interna
+    private var skidTimer: Double = 0
+    private var turnTimer: Double = 0
+    private var lastAction: StickmanAction = .drawn
+    private var jumpWindup: Double = 0
+    private var pendingJumpVX: CGFloat = 0
+    private var dodgeBurst: CGFloat = 0
+    private var dodgeBurstTimer: Double = 0
+    private var scaredBurstX: CGFloat = 0
+
+    // IA interna
+    private var iaTimer: Double = 0
+    private var iaCooldown: Double = 0
+    private var greetCooldown: Double = 0
+    private var fastApproachThrottle: Double = 0
+    private var hideTargetX: CGFloat? = nil
+    private var hideObjectID: UUID? = nil
+
+    // Arrastre
+    private var isDragged: Bool = false
+    private var dragTime: Double = 0
+    @Published var dragEscapeSignal: Int = 0   // la vista lo observa para soltar el gesto
+
+    // Deshacer (historial de trazos del usuario)
+    private var strokeHistory: [[UserStroke]] = []
+
     var isAirborne: Bool { heightAboveGround > 0.5 || velocityY > 0 }
     var secondsUntilRest: Double { max(0, 120 - activitySeconds) }
+    var speedNorm: CGFloat { min(1, moveSpeed / 170) }   // 0 = andar, 1 = correr
 
     private func setThought(_ text: String) {
         thought = text
         thoughtTimer = text.isEmpty ? 0 : 3.0
+    }
+
+    func setFacing(_ f: CGFloat) {
+        let nf: CGFloat = f >= 0 ? 1 : -1
+        if nf != facing && moveSpeed > 45 && !isAirborne {
+            turnTimer = 0.3; isTurning = true; turnElapsed = 0
+        }
+        facing = nf
     }
 
     // MARK: Darle vida
@@ -126,7 +221,7 @@ final class StickmanController: ObservableObject {
         guard !isAlive else { return }
         isAlive = true
         action = .awakening
-        mode = .override; overrideTimer = 2.4
+        mode = .override; overrideTimer = 2.8
         setThought("¡estoy vivo! ¿qué es todo esto?")
         drives.curiosity = 75
     }
@@ -136,6 +231,7 @@ final class StickmanController: ObservableObject {
     func suggest(_ suggested: StickmanAction) {
         guard isAlive, !isResting else { return }
         perception.timeSinceLastInteraction = 0
+        interactionBrain.registerKindness()
         if suggested == .jumping { suggestJump(); return }
         let probability = obedienceProbability(for: suggested)
         if Double.random(in: 0...1) <= probability {
@@ -147,7 +243,7 @@ final class StickmanController: ObservableObject {
             startOverride(.denying, duration: 1.5)
             setThought(suggested == .sleeping ? "no tengo sueño" : "no, ahora no")
         } else {
-            let alternatives: [StickmanAction] = [.dancing, .walking, .sitting, .sword, .waving]
+            let alternatives: [StickmanAction] = [.dancing, .walking, .sitting, .sword, .waving, .laughing, .celebrating]
             let alt = alternatives.randomElement() ?? .walking
             startOverride(alt, duration: durationFor(alt))
             if alt == .sword { ensureObject(.sword); swordProgress = 0; setThought("¡yo quiero la espada!") }
@@ -192,19 +288,21 @@ final class StickmanController: ObservableObject {
         case .sitting, .sleeping: return 6.0
         case .sword: return 5.0
         case .walking, .running: return 3.0
+        case .laughing, .celebrating: return 2.2
         default: return 2.5
         }
     }
 
     private func startOverride(_ a: StickmanAction, duration: Double) {
         action = a; mode = .override; overrideTimer = duration
-        if a == .walking || a == .running, Bool.random() { facing = facing * -1 }
+        shieldKind = nil
+        if a != .hiding { hidingObjectID = nil }
+        // Sin giros al azar: quien llama (sugerencia, IA o plan) ya ha fijado el rumbo con setFacing.
     }
 
     private func suggestJump() {
         if Double.random(in: 0...1) <= obedienceProbability(for: .jumping) {
-            guard !isAirborne else { return }
-            velocityY = 640; action = .jumping; mode = .physics
+            performJump(vx: 0)
         } else {
             startOverride(.denying, duration: 1.3); setThought("no, ahora no salto")
         }
@@ -212,51 +310,165 @@ final class StickmanController: ObservableObject {
 
     func jump() { suggestJump() }
 
-    // MARK: Interaccion tactil: el dedo ES el cursor del animador
-
-    func fingerMoved(to fingerX: CGFloat) {
-        perception.fingerX = fingerX
-        perception.fingerIsClose = abs(fingerX - x) < 80
-        perception.timeSinceLastInteraction = 0
+    /// Salto con anticipacion: primero se agacha (clip jumpCrouch) y luego despega.
+    private func performJump(vx: CGFloat) {
+        guard !isAirborne, jumpWindup <= 0 else { return }
+        jumpWindup = 0.18
+        pendingJumpVX = vx
+        action = .jumping; mode = .physics
+        isJumpWindingUp = true
     }
 
-    func reactToTap(at touchX: CGFloat) {
+    // MARK: HERRAMIENTAS DEL USUARIO: lapiz / goma / deshacer
+
+    func beginUserStroke(at worldPoint: CGPoint) {
+        strokeHistory.append(userStrokes)
+        if strokeHistory.count > 12 { strokeHistory.removeFirst() }
+        currentStroke = UserStroke(points: [worldPoint])
+    }
+    func appendUserStrokePoint(_ worldPoint: CGPoint) {
+        guard var s = currentStroke else { return }
+        if let last = s.points.last, hypot(worldPoint.x - last.x, worldPoint.y - last.y) < 3 { return }
+        s.points.append(worldPoint)
+        currentStroke = s
+    }
+    func finishUserStroke() {
+        guard let s = currentStroke else { return }
+        currentStroke = nil
+        userStrokes.append(s)
+        if userStrokes.count > 40 { userStrokes.removeFirst(userStrokes.count - 40) }
+        // Dibujarle algo es jugar suave: se calma y se interesa
+        interactionBrain.registerKindness()
+        drives.registerKindPlay()
+        if isAlive, let first = s.points.first, abs(first.x - x) < 130 {
+            setFacing(first.x >= x ? 1 : -1)
+            if Double.random(in: 0...1) < 0.5 { setThought("¿qué dibujas?") }
+            drives.curiosity = min(100, drives.curiosity + 8)
+        }
+    }
+    /// Borra trazos y objetos del stickman cerca del punto (modo goma).
+    func eraseAt(_ worldPoint: CGPoint) {
+        var changed = false
+        let kept = userStrokes.filter { stroke in
+            !stroke.points.contains { hypot($0.x - worldPoint.x, $0.y - worldPoint.y) < 30 }
+        }
+        if kept.count != userStrokes.count { changed = true }
+        for i in objects.indices where objects[i].state != .gone && !objects[i].kind.isCreature {
+            if abs(objects[i].x - worldPoint.x) < 38 && worldPoint.y < 96 {
+                objects[i].state = .gone; changed = true
+            }
+        }
+        if changed {
+            strokeHistory.append(userStrokes)
+            if strokeHistory.count > 12 { strokeHistory.removeFirst() }
+            userStrokes = kept
+        }
+    }
+    func undoStrokeAction() {
+        guard let previous = strokeHistory.popLast() else { return }
+        userStrokes = previous
+    }
+    func clearAllStrokes() {
+        guard !userStrokes.isEmpty else { return }
+        strokeHistory.append(userStrokes)
+        if strokeHistory.count > 12 { strokeHistory.removeFirst() }
+        userStrokes = []
+    }
+    var canUndoStrokes: Bool { !strokeHistory.isEmpty }
+
+    /// Altura (mundo) de la plataforma que forma un trazo casi horizontal bajo x, si la hay.
+    func strokeGroundHeight(at px: CGFloat) -> CGFloat? {
+        var best: CGFloat? = nil
+        for stroke in userStrokes {
+            guard stroke.points.count > 1 else { continue }
+            for i in 0..<(stroke.points.count - 1) {
+                let a = stroke.points[i], b = stroke.points[i + 1]
+                if abs(b.y - a.y) > 26 { continue }             // solo tramos caminables
+                let minX = min(a.x, b.x) - 6, maxX = max(a.x, b.x) + 6
+                if px < minX || px > maxX { continue }
+                let span = b.x - a.x
+                let y = span == 0 ? max(a.y, b.y) : a.y + (b.y - a.y) * (px - a.x) / span
+                if best == nil || y > best! { best = y }
+            }
+        }
+        return best
+    }
+    private func groundTotalHeight(at px: CGFloat) -> CGFloat {
+        max(platformHeight, strokeGroundHeight(at: px) ?? 0)
+    }
+
+    // MARK: Interaccion tactil: el dedo ES el cursor del animador (modo cursor)
+
+    /// Punto en coordenadas de mundo (x, altura sobre el suelo).
+    func fingerMoved(toWorldPoint wp: CGPoint) {
+        perception.fingerX = wp.x
+        perception.fingerIsClose = abs(wp.x - x) < 80
+        perception.timeSinceLastInteraction = 0
+        fingerTracker.update(point: wp, stickmanX: x, stickmanHeight: platformHeight + heightAboveGround + 62, now: elapsed)
+        // Acercamiento muy rapido a su cuerpo = acoso (con respiro para no contar 60 veces)
+        if fastApproachThrottle <= 0, fingerTracker.approachSpeed > 300,
+           fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62) < 140 {
+            interactionBrain.registerFastApproach()
+            fastApproachThrottle = 0.9
+        }
+    }
+    func fingerReleased() {
+        fingerTracker.release(now: elapsed)
+        perception.fingerX = nil
+    }
+
+    func reactToTap(atWorldX touchX: CGFloat, fingerSpeed: CGFloat) {
         guard isAlive, !isResting else { return }
-        fingerMoved(to: touchX)
+        perception.timeSinceLastInteraction = 0
         tapTimestamps.append(elapsed); tapTimestamps.removeAll { elapsed - $0 > 6 }
         if tapTimestamps.count >= 5 { // le estan molestando mucho
             memory.annoyances += 1; drives.registerAnnoyance(); tapTimestamps.removeAll()
         }
         let distance = touchX - x
+        if fingerSpeed > 420 && abs(distance) < 56 {
+            // Toque brusco encima: aplastado + acoso
+            interactionBrain.registerRoughTap()
+            startOverride(.squashed, duration: 0.6)
+            setThought("¡auch!")
+            return
+        }
         if drives.anger > 72 {
             plan = PlanLibrary.showOffPowers(); planStepStarted = false; mode = .plan
             setThought("¡YA ESTÁ BIEN! ¡CHOSEN ONE!")
-        } else if abs(distance) < 70 {
+        } else if abs(distance) < 46 {
             startOverride(.scared, duration: 0.9)
-            facing = distance >= 0 ? -1 : 1; velocityX = facing * 250; mode = .override
+            setFacing(distance >= 0 ? -1 : 1); scaredBurstX = facing * 240
             setThought("¡eh! ¡cuidado!")
         } else if abs(distance) < 190 {
-            facing = distance >= 0 ? 1 : -1
+            setFacing(distance >= 0 ? 1 : -1)
             startOverride(.fighting, duration: 1.7)
             setThought(Bool.random() ? "¡ese dedo es mío!" : "¡ven aquí, dedo!")
         } else {
-            facing = distance >= 0 ? 1 : -1
-            startOverride(.walking, duration: abs(distance) / walkSpeed)
+            setFacing(distance >= 0 ? 1 : -1)
+            startOverride(.walking, duration: abs(distance) / 58)
         }
     }
 
+    // Arrastre (agarrar al stickman): la IA cuenta intentos y el escapa solo
     func beginDrag() {
         guard isAlive else { return }
-        action = .thrown; mode = .physics; velocityX = 0; velocityY = 0
+        interactionBrain.registerGrabAttempt(now: elapsed)
+        action = .grabbed; mode = .physics; velocityX = 0; velocityY = 0
+        moveSpeed = 0
+        isDragged = true; dragTime = 0
         perception.timeSinceLastInteraction = 0
+        if interactionBrain.grabAttempts >= 2 { setThought("¡otra vez no!") }
     }
     func drag(to newX: CGFloat, aboveGround: CGFloat) { x = newX; heightAboveGround = max(0, aboveGround) }
     func endDrag(velocity: CGSize) {
         guard isAlive else { return }
+        isDragged = false
         velocityX = velocity.width; velocityY = -velocity.height
         action = .thrown; mode = .physics
         if abs(velocity.width) + abs(velocity.height) > 900 {
             memory.annoyances += 1; drives.registerAnnoyance(); setThought("¡no soy un juguete!")
+        } else if dragTime < 0.5 {
+            interactionBrain.registerKindness(); drives.registerKindPlay()
         } else { drives.registerKindPlay() }
     }
 
@@ -268,12 +480,12 @@ final class StickmanController: ObservableObject {
         } else {
             objects.append(DrawnObject(kind: kind, x: clampedObjectX(x + facing * 58)))
         }
-        if objects.count > 6 { objects.removeFirst(objects.count - 6) }
+        if objects.count > 7 { objects.removeFirst(objects.count - 7) }
         if kind == .sword { swordProgress = 0 }
     }
     private func clampedObjectX(_ v: CGFloat) -> CGFloat { min(max(36, v), lastWidth - 36) }
     private func nearestIntactObjectIndex() -> Int? {
-        objects.indices.filter { objects[$0].state == .intact }
+        objects.indices.filter { objects[$0].state == .intact && !objects[$0].kind.isCreature }
             .min(by: { abs(objects[$0].x - x) < abs(objects[$1].x - x) })
     }
 
@@ -286,7 +498,7 @@ final class StickmanController: ObservableObject {
         case .flight: action = .flying
         case .superSpeed: action = .running
         case .fireBreath, .eyeLaser, .ice, .createDestroy:
-            if let idx = nearestIntactObjectIndex() { facing = objects[idx].x >= x ? 1 : -1 }
+            if let idx = nearestIntactObjectIndex() { setFacing(objects[idx].x >= x ? 1 : -1) }
             if power == .fireBreath, let idx = nearestIntactObjectIndex() { objects[idx].state = .burning }
             if power == .createDestroy {
                 if Bool.random(), let idx = nearestIntactObjectIndex() { objects[idx].state = .gone; emit(atObjectX: objects[idx].x, kind: .energy, count: 16) }
@@ -343,6 +555,101 @@ final class StickmanController: ObservableObject {
         pausedPlan = nil; mode = .plan; planGapTimer = 0.5
     }
 
+    // MARK: IA tactil: percibe -> decide -> anima
+
+    private func evaluateInteractionAI(dt: Double) {
+        iaTimer -= dt; iaCooldown -= dt; greetCooldown -= dt
+        fastApproachThrottle -= dt
+        guard iaTimer <= 0 else { return }
+        iaTimer = 0.12
+        guard fingerTracker.present, toolMode == .cursor, !isDragged, !isResting,
+              mode != .physics, iaCooldown <= 0 else { return }
+        // No interrumpir animaciones con peso (rodar, aterrizar, mareo, celebracion...)
+        let busy: Set<StickmanAction> = [.rolling, .landing, .dizzy, .grabbingFinger, .celebrating, .squashed, .escaping]
+        if busy.contains(action) { return }
+
+        let hasShield = objects.contains { ($0.kind == .block || $0.kind == .sword) && $0.state == .intact }
+        let hasHiding = objects.contains { !$0.kind.isCreature && $0.state == .intact }
+        let decision = interactionBrain.decide(
+            finger: fingerTracker, stickmanX: x,
+            stickmanHeight: platformHeight + heightAboveGround + 62,
+            drives: drives, hasShieldObject: hasShield, hasHidingSpot: hasHiding)
+        guard decision != .none else { return }
+        if decision == .greet && greetCooldown > 0 { return }
+        executeDecision(decision)
+    }
+
+    private func executeDecision(_ decision: InteractionDecision) {
+        lastDecision = decision.rawValue
+        iaCooldown = 0.9
+        let fingerX = fingerTracker.point.x
+        switch decision {
+        case .none: break
+        case .curious:
+            setFacing(fingerX >= x ? 1 : -1)
+            if abs(fingerX - x) > 110 { startOverride(.walking, duration: 1.0) }
+            else { startOverride(.idle, duration: 0.9) }
+            setThought(decision.thought)
+        case .greet:
+            greetCooldown = 6
+            setFacing(fingerX >= x ? 1 : -1)
+            startOverride(.waving, duration: 1.6)
+            setThought(decision.thought)
+        case .flee:
+            setFacing(fingerX >= x ? -1 : 1)
+            startOverride(.fleeing, duration: 1.1)
+            setThought(decision.thought)
+        case .dodgeDuck:
+            startOverride(.dodging, duration: 0.55)
+            setThought(decision.thought)
+        case .dodgeRoll:
+            setFacing(fingerX >= x ? -1 : 1)
+            dodgeBurst = 250; dodgeBurstTimer = 0.55
+            startOverride(.rolling, duration: 0.62)
+            setThought(decision.thought)
+        case .jumpOver:
+            setFacing(fingerX >= x ? 1 : -1)
+            setThought(decision.thought)
+            performJump(vx: facing * 250)
+        case .block:
+            setFacing(fingerX >= x ? 1 : -1)
+            startOverride(.blocking, duration: 0.85)
+            setThought(decision.thought)
+        case .grabFinger:
+            setFacing(fingerX >= x ? 1 : -1)
+            startOverride(.grabbingFinger, duration: 1.2)
+            isGrabbingFinger = true
+            setThought(decision.thought)
+        case .counterAttack:
+            setFacing(fingerX >= x ? 1 : -1)
+            startOverride(.fighting, duration: 2.6)
+            setThought(decision.thought)
+        case .miniChosen:
+            setFacing(fingerX >= x ? 1 : -1)
+            setThought(decision.thought)
+            startOverride(.usingPower, duration: 0.9)
+            activatePower(.superPunch)
+            chosenAuraTimer = 2.5
+        case .hide:
+            if let idx = nearestIntactObjectIndex() {
+                hideTargetX = objects[idx].x - facing * 6
+                hideObjectID = objects[idx].id
+                setFacing(objects[idx].x >= x ? 1 : -1)
+                startOverride(.walking, duration: 2.0)
+                setThought(decision.thought)
+            } else {
+                startOverride(.hiding, duration: 2.0)
+                setThought(decision.thought)
+            }
+        case .shield:
+            setFacing(fingerX >= x ? 1 : -1)
+            shieldKind = objects.first(where: { ($0.kind == .block || $0.kind == .sword) && $0.state == .intact })?.kind
+            startOverride(.blocking, duration: 1.3)
+            shieldKind = objects.first(where: { ($0.kind == .block || $0.kind == .sword) && $0.state == .intact })?.kind
+            setThought(decision.thought)
+        }
+    }
+
     // MARK: Bucle principal (60 fps desde la vista)
 
     func tick(deltaTime dt: Double, stageWidth: CGFloat) {
@@ -350,6 +657,10 @@ final class StickmanController: ObservableObject {
         phase += dt; elapsed += dt
         particleSystem.tick(dt: dt); particles = particleSystem.particles
         guard isAlive else { return }
+
+        // Tiempo en la accion actual (reloj de los clips)
+        if action != lastAction { animTime = 0; lastAction = action } else { animTime += dt }
+        if isGrabbingFinger && action != .grabbingFinger { isGrabbingFinger = false }
 
         // Pensamiento: caduca
         if thoughtTimer > 0 { thoughtTimer -= dt; if thoughtTimer <= 0 { thought = "" } }
@@ -368,12 +679,30 @@ final class StickmanController: ObservableObject {
         if frozenTimer > 0 { frozenTimer -= dt; if frozenTimer <= 0 { frozenPatchX = nil } }
         if shakeAmount > 0 { shakeAmount = max(0, shakeAmount - dt * 26) }
         if swordProgress < 1, action == .sword { swordProgress = min(1, swordProgress + dt / 0.8) }
+        for i in objects.indices where objects[i].kind.isCreature { objects[i].bouncePhase += dt }
+
+        // Escape del agarre: si le sujetan mas de ~2,2 s se sacude y escapa solo
+        if isDragged {
+            dragTime += dt
+            if dragTime > 1.3 { action = .escaping }
+            if dragTime >= 2.2 {
+                isDragged = false
+                dragEscapeSignal += 1
+                velocityX = (fingerTracker.point.x >= x ? -1 : 1) * 330
+                velocityY = 390
+                action = .thrown; mode = .physics
+                memory.annoyances += 1; drives.registerAnnoyance()
+                setThought("¡me escapo!")
+            }
+            return
+        }
 
         // ------- DESCANSO -------
         if isResting {
             restSecondsLeft -= dt
             drives.evolve(dt: dt, resting: true, interacting: false)
             emotion = Emotion.derive(from: drives, resting: true)
+            updateLocomotion(dt: dt)
             emitTimer += dt
             if emitTimer > 0.9 { emitTimer = 0; particleSystem.emit(origin: CGPoint(x: x, y: 118), kind: .zzz, count: 1, spread: 8, baseVelocity: CGVector(dx: 8, dy: 26)); particles = particleSystem.particles }
             if restSecondsLeft <= 0 { endRest() }
@@ -384,32 +713,75 @@ final class StickmanController: ObservableObject {
         activitySeconds += dt
         if activitySeconds >= 120 { startRest(); return }
 
-        // Cerebro: impulsos, memoria, percepcion, emocion
+        // Cerebro: impulsos, memoria, percepcion, emocion, acoso
         perception.timeSinceLastInteraction += dt
         perception.stickmanX = x; perception.stageWidth = stageWidth
         perception.aliveObjectKinds = objects.filter { $0.state == .intact }.map { $0.kind }
         drives.evolve(dt: dt, resting: false, interacting: perception.timeSinceLastInteraction < 5)
         memory.tick(dt: dt)
+        interactionBrain.tick(dt: dt, fingerPresent: fingerTracker.present)
+        harassmentLevel = interactionBrain.harassment
         emotion = Emotion.derive(from: drives, resting: false)
 
-        // ------- FISICA (saltos / lanzamientos) -------
-        if mode == .physics || isAirborne {
-            if action != .flying {
-                velocityY -= gravity * CGFloat(dt)
-                heightAboveGround += velocityY * CGFloat(dt)
-                x += velocityX * CGFloat(dt); velocityX *= 0.98
-                if heightAboveGround <= 0 {
-                    heightAboveGround = 0; velocityY = 0; velocityX = 0
-                    action = .idle; mode = .plan; planGapTimer = 0.4
-                }
+        // IA tactil (solo con el dedo presente y sin fisicas en curso)
+        evaluateInteractionAI(dt: dt)
+
+        // ------- SALTO CON ANTICIPACION -------
+        if jumpWindup > 0 {
+            jumpWindup -= dt
+            if jumpWindup <= 0 {
+                isJumpWindingUp = false
+                velocityY = 640; velocityX = pendingJumpVX
             }
         }
 
-        // ------- MODO OVERRIDE (reacciones y sugerencias aceptadas) -------
+        // ------- FISICA (saltos / lanzamientos / caidas) -------
+        if mode == .physics || isAirborne {
+            if action != .flying {
+                let atLeftWall = x <= 35, atRightWall = x >= stageWidth - 35
+                isWallSliding = (atLeftWall || atRightWall) && velocityY < -60 && heightAboveGround > 4
+                if isWallSliding { velocityY = max(velocityY, -135) }  // se desliza frenando contra la pared
+                velocityY -= gravity * CGFloat(dt) * (isWallSliding ? 0.25 : 1)
+                heightAboveGround += velocityY * CGFloat(dt)
+                x += velocityX * CGFloat(dt); velocityX *= 0.985
+                moveSpeed = 0
+                let ground = groundTotalHeight(at: x) - platformHeight
+                if heightAboveGround <= ground {
+                    let impact = -velocityY
+                    heightAboveGround = ground; velocityY = 0; velocityX = 0
+                    isWallSliding = false
+                    if jumpWindup <= 0 {
+                        if impact > 980 { startOverride(.rolling, duration: 0.62); overrideLandingChain = .dizzy }
+                        else if impact > 430 { startOverride(.landing, duration: 0.42) }
+                        else { action = .idle; mode = .plan; planGapTimer = 0.4 }
+                    }
+                }
+                clampToStage(stageWidth)
+                return
+            }
+        }
+
+        // ------- MODO OVERRIDE (reacciones, IA y sugerencias aceptadas) -------
         if mode == .override {
             overrideTimer -= dt
-            applyHorizontalMovement(dt: dt)
-            if overrideTimer <= 0 { mode = .plan; if plan == nil { planGapTimer = 0.3 } }
+            updateLocomotion(dt: dt)
+            // Escondite: al llegar al objeto, se agazapa tras el
+            if let target = hideTargetX, action == .walking, abs(x - target) < 20 {
+                hideTargetX = nil
+                hidingObjectID = hideObjectID
+                startOverride(.hiding, duration: 2.4)
+                hidingObjectID = hideObjectID
+            }
+            if overrideTimer <= 0 {
+                if overrideLandingChain == .dizzy {
+                    overrideLandingChain = nil
+                    startOverride(.dizzy, duration: 1.4)
+                    setThought("todo da vueltas...")
+                } else {
+                    mode = .plan; if plan == nil { planGapTimer = 0.3 }
+                }
+            }
+            groundSnap(dt: dt)
             clampToStage(stageWidth)
             return
         }
@@ -419,6 +791,7 @@ final class StickmanController: ObservableObject {
             if plan == nil {
                 planGapTimer -= dt
                 action = .idle
+                moveSpeed = 0
                 if planGapTimer <= 0 {
                     plan = PlanLibrary.choosePlan(drives: drives, memory: memory, perception: perception)
                     planStepStarted = false
@@ -444,7 +817,22 @@ final class StickmanController: ObservableObject {
                 }
             }
         }
+        groundSnap(dt: dt)
         clampToStage(stageWidth)
+    }
+
+    private var overrideLandingChain: StickmanAction? = nil
+
+    /// Si el suelo (plataforma o trazo del usuario) sube/baja bajo sus pies, se ajusta o cae.
+    private func groundSnap(dt: Double) {
+        if action == .flying || isDragged { return }
+        let target = groundTotalHeight(at: x) - platformHeight
+        if heightAboveGround < target - 1 {
+            heightAboveGround = target      // sube a la plataforma/trazo (escalon)
+        } else if heightAboveGround > target + 5 {
+            velocityY = 0; mode = .physics   // el suelo desaparece: cae
+            action = .jumping
+        }
     }
 
     private func executeStep(_ step: PlanStep, dt: Double) {
@@ -460,9 +848,10 @@ final class StickmanController: ObservableObject {
         case .fireBreath:
             if emitTimer > 0.08 { emitTimer = 0; particleSystem.emit(origin: CGPoint(x: x + facing * 34, y: 96), kind: .fire, count: 4, spread: 26, baseVelocity: CGVector(dx: Double(facing) * 130, dy: 6)) }
         case .flight:
-            heightAboveGround = 112 + CGFloat(sin(phase * 2.1)) * 16
+            heightAboveGround = (112 - platformHeight) + CGFloat(sin(phase * 2.1)) * 16
             x += facing * 95 * CGFloat(dt)
-            if x > lastWidth - 50 || x < 50 { facing *= -1 }
+            moveSpeed = 95
+            if x > lastWidth - 50 || x < 50 { setFacing(facing * -1) }
             if emitTimer > 0.06 { emitTimer = 0; particleSystem.emit(origin: CGPoint(x: x - facing * 18, y: 60), kind: .trail, count: 2, spread: 10, baseVelocity: CGVector(dx: -Double(facing) * 60, dy: -8)) }
         case .eyeLaser:
             if emitTimer > 0.12 { emitTimer = 0; if let idx = nearestIntactObjectIndex() { emit(atObjectX: objects[idx].x, kind: .spark, count: 3) } }
@@ -471,31 +860,70 @@ final class StickmanController: ObservableObject {
         default: break
         }
         particles = particleSystem.particles
-        applyHorizontalMovement(dt: dt)
+        updateLocomotion(dt: dt)
 
         // Pelota: la persigue y la patea suavemente
         if action == .playingBall, let idx = objects.firstIndex(where: { $0.kind == .ball && $0.state == .intact }) {
-            facing = objects[idx].x >= x ? 1 : -1
-            if abs(objects[idx].x - x) < 34 { objects[idx].x = clampedObjectX(objects[idx].x + facing * 46) ; objects[idx].bouncePhase += 1 }
+            setFacing(objects[idx].x >= x ? 1 : -1)
+            if abs(objects[idx].x - x) < 34 { objects[idx].x = clampedObjectX(objects[idx].x + facing * 46); objects[idx].bouncePhase += 1 }
         }
         if let idx = objects.firstIndex(where: { $0.kind == .ball }) { objects[idx].bouncePhase += dt * 3 }
     }
 
-    private func applyHorizontalMovement(dt: Double) {
+    // MARK: LOCOMOCION (reescrita en la v2)
+
+    /// Velocidad deseada segun la accion: el cuerpo acelera/frena hasta ella.
+    private func desiredSpeed() -> CGFloat {
+        if dodgeBurstTimer > 0 { return dodgeBurst }
         switch action {
-        case .walking: x += facing * walkSpeed * CGFloat(dt)
-        case .running: x += facing * (activePower == .superSpeed ? 335 : walkSpeed * 2.6) * CGFloat(dt)
-        case .scared: x += velocityX * CGFloat(dt); velocityX *= 0.90
-        case .fighting: x += sin(phase * 10) * 24 * CGFloat(dt) * facing
-        case .playingBall: x += facing * walkSpeed * 1.25 * CGFloat(dt)
-        case .climbing: x += facing * walkSpeed * 0.5 * CGFloat(dt)
-        default: break
+        case .walking: return 58
+        case .running: return activePower == .superSpeed ? 335 : 152
+        case .fleeing: return 218
+        case .climbing: return 30
+        case .playingBall: return 78
+        case .fighting: return 24
+        case .scared: return 0   // el retroceso va por scaredBurstX
+        default: return 0
+        }
+    }
+
+    private func updateLocomotion(dt: Double) {
+        if dodgeBurstTimer > 0 { dodgeBurstTimer -= dt; if dodgeBurstTimer <= 0 { dodgeBurst = 0 } }
+        if turnTimer > 0 { turnTimer -= dt; turnElapsed = 0.3 - max(0, turnTimer); if turnTimer <= 0 { isTurning = false } }
+        if skidTimer > 0 { skidTimer -= dt; skidElapsed = 0.42 - max(0, skidTimer); if skidTimer <= 0 { isSkidding = false } }
+
+        let target = desiredSpeed()
+        if target > moveSpeed {
+            moveSpeed = min(target, moveSpeed + 320 * CGFloat(dt))         // acelera con peso
+        } else if target < moveSpeed {
+            // Frenada brusca desde correr -> DERRAPE con polvo
+            if moveSpeed > 112 && target < 60 && skidTimer <= 0 && !isAirborne {
+                isSkidding = true; skidTimer = 0.42; skidElapsed = 0
+                particleSystem.emit(origin: CGPoint(x: x - facing * 10, y: 6), kind: .smoke, count: 6, spread: 14, baseVelocity: CGVector(dx: -Double(facing) * 40, dy: 18))
+                particles = particleSystem.particles
+            }
+            moveSpeed = max(target, moveSpeed - (isSkidding ? 640 : 460) * CGFloat(dt))
+        }
+        if moveSpeed > 0.5 && !isAirborne {
+            x += facing * moveSpeed * CGFloat(dt)
+            // Fase de zancada ligada a la velocidad: a mas velocidad, ciclo mas rapido y largo
+            let strideLength = 62 + speedNorm * 38
+            gaitPhase01 += Double(moveSpeed / strideLength) * dt
+            if gaitPhase01 >= 1 { gaitPhase01 -= 1 }
+        }
+        if action == .scared && scaredBurstX != 0 {
+            x += scaredBurstX * CGFloat(dt); scaredBurstX *= 0.88
+            if abs(scaredBurstX) < 8 { scaredBurstX = 0 }
+        }
+        // Agarrando el dedo: se desplaza hacia el para colgarse de el
+        if action == .grabbingFinger && fingerTracker.present {
+            x += (fingerTracker.point.x - x) * CGFloat(min(1, dt * 7))
         }
     }
 
     private func clampToStage(_ width: CGFloat) {
         let margin: CGFloat = 34
-        if x < margin { x = margin; facing = 1 }
-        else if x > width - margin { x = width - margin; facing = -1 }
+        if x < margin { x = margin; setFacing(1) }
+        else if x > width - margin { x = width - margin; setFacing(-1) }
     }
 }

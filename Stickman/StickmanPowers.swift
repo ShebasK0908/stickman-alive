@@ -30,14 +30,17 @@ enum Power: String, CaseIterable {
 // MARK: - Objetos dibujados por el propio stickman
 
 enum DrawnObjectKind: String, CaseIterable {
-    case sword, ball, chair, table, doorHouse, friend, block, target
+    case sword, ball, chair, table, doorHouse, friend, block, target, bird, dog, hammer
     var label: String {
         switch self {
         case .sword: return "espada"; case .ball: return "pelota"; case .chair: return "silla"
         case .table: return "mesa"; case .doorHouse: return "puertita"; case .friend: return "amigo"
-        case .block: return "bloque"; case .target: return "blanco"
+        case .block: return "bloque"; case .target: return "blanco"; case .bird: return "pajarito"
+        case .dog: return "perrito"; case .hammer: return "martillo"
         }
     }
+    /// Criaturas de AvA4: cobran vida y se mueven por ciclos propios
+    var isCreature: Bool { self == .bird || self == .dog }
 }
 
 enum DrawnObjectState: String {
