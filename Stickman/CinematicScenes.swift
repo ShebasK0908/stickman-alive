@@ -276,7 +276,7 @@ enum CinematicCatalog {
         beats: [
             CinematicBeat(0.0, .letterbox(0.85, duration: 1.0)),
             CinematicBeat(0.2, .poseSource(.action(.idle))),
-            CinematicBeat(0.3, .subtitle("Algo se remueve dentro de el...", seconds: 2.6)),
+            CinematicBeat(0.3, .subtitle("Algo se remueve dentro de él...", seconds: 2.6)),
             CinematicBeat(1.3, .poseSource(.clip(AnimationLibrary.chargePower)), note: "chargePower 1.9: temblor que ACELERA (v6)"),
             CinematicBeat(2.0, .particles(kind: .energy, count: 5, anchor: .hands)),
             CinematicBeat(2.5, .particles(kind: .energy, count: 7, anchor: .character)),
@@ -285,15 +285,12 @@ enum CinematicCatalog {
             CinematicBeat(2.92, .particles(kind: .energy, count: 16, anchor: .character)),
             CinematicBeat(2.95, .subtitle("¡DESPIERTA!", seconds: 1.8)),
             CinematicBeat(3.2, .poseSource(.action(.powerPose)), note: "powerPose 1.8"),
-            CinematicBeat(3.4, .subtitle("El despertar: poderes desbloqueados.", seconds: 2.4)),
             CinematicBeat(5.0, .heightTo(150, duration: 0.9, easing: .easeOut), note: "Despega"),
             CinematicBeat(5.0, .poseSource(.action(.flying)), note: "flyPose 1.2: balanceo de delfin, stretch 1.05-1.07"),
-            CinematicBeat(5.2, .subtitle("Puede volar.", seconds: 2.2)),
             CinematicBeat(8.3, .heightTo(56, duration: 0.6, easing: .easeInOut), note: "Baja a altura de manos: va a escupir fuego"),
             CinematicBeat(8.9, .callback(.ensureRock), note: "La roca: un .block intacto del mundo para el laser"),
             CinematicBeat(8.9, .setPower(.fireBreath), note: "La vista dibuja la llama; el cuerpo lo pone el clip"),
             CinematicBeat(8.9, .poseSource(.clip(AnimationLibrary.clip(forPower: .fireBreath))), note: "firePose 1.1 x3 ciclos enteros"),
-            CinematicBeat(9.1, .subtitle("Fuego: carga, descarga seca y sostenido temblando.", seconds: 2.8)),
             CinematicBeat(9.3, .haptic(.medium)),    // descarga ciclo 1 (+0.40)
             CinematicBeat(9.3, .particles(kind: .fire, count: 10, anchor: .hands)),
             CinematicBeat(10.4, .haptic(.medium)),   // descarga ciclo 2
@@ -302,7 +299,6 @@ enum CinematicCatalog {
             CinematicBeat(11.5, .particles(kind: .fire, count: 10, anchor: .hands)),
             CinematicBeat(12.2, .setPower(.eyeLaser)),
             CinematicBeat(12.2, .poseSource(.clip(AnimationLibrary.clip(forPower: .eyeLaser))), note: "laserPose 1.0 x3: tension -> disparo -> sostenido vibrando -> corte"),
-            CinematicBeat(12.4, .subtitle("El laser busca la roca...", seconds: 2.4)),
             CinematicBeat(12.54, .haptic(.light)),   // disparo ciclo 1 (~+0.34)
             CinematicBeat(12.54, .particles(kind: .spark, count: 6, anchor: .groundFront)),
             CinematicBeat(13.54, .haptic(.light)),   // disparo ciclo 2
@@ -313,7 +309,6 @@ enum CinematicCatalog {
             CinematicBeat(15.75, .poseSource(.clip(AnimationLibrary.landing)), note: "landing 0.55 con su micro-rebote v6"),
             CinematicBeat(16.3, .setPower(.superPunch)),
             CinematicBeat(16.3, .poseSource(.clip(AnimationLibrary.clip(forPower: .superPunch))), note: "superPunchPose 1.15: anticipacion larga conservada"),
-            CinematicBeat(16.5, .subtitle("Y el superpunetazo agrieta el suelo.", seconds: 2.4)),
             CinematicBeat(16.88, .haptic(.heavy), note: "IMPACTO (+0.58); la vibracion +0.58...+0.70 va en el clip"),
             CinematicBeat(16.88, .particles(kind: .spark, count: 12, anchor: .groundFront)),
             CinematicBeat(16.88, .propShow(.groundCrack, dx: 62, height: 0, scale: 1)),
@@ -329,12 +324,11 @@ enum CinematicCatalog {
             CinematicBeat(23.05, .poseSource(.clip(AnimationLibrary.fallPose))),
             CinematicBeat(23.6, .poseSource(.clip(AnimationLibrary.landing))),
             CinematicBeat(24.15, .poseSource(.action(.powerPose)), note: "powerPose final 1.8"),
-            CinematicBeat(24.3, .subtitle("Poderes listos para el modo libre.", seconds: 2.6)),
             CinematicBeat(25.95, .poseSource(.action(.celebrating)), note: "celebrate 0.9 x2"),
             CinematicBeat(26.3, .particles(kind: .energy, count: 10, anchor: .head)),
             CinematicBeat(27.75, .letterbox(0, duration: 1.3)),
             CinematicBeat(27.75, .poseSource(.action(.idle))),
-            CinematicBeat(28.0, .subtitle("Ahora si: que empiece la fiesta.", seconds: 1.9)),
+            CinematicBeat(28.0, .subtitle("Ahora sí: que empiece la fiesta.", seconds: 1.9)),
         ])
 
     // MARK: 5 · El sueno (~20 s · tras varios ciclos de dormir)
