@@ -16,6 +16,11 @@
 		000000000000000000000038 /* StickmanAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000025 /* StickmanAnimation.swift */; };
 		00000000000000000000003C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000028 /* Assets.xcassets */; };
 		0000000000000000000000A5 /* FloatingStickman.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A3 /* FloatingStickman.swift */; };
+		0000000000000000000000D0 /* StickmanAnimationV7.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C0 /* StickmanAnimationV7.swift */; };
+		0000000000000000000000D1 /* StickmanAnimationV8.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C1 /* StickmanAnimationV8.swift */; };
+		0000000000000000000000D2 /* StickmanAnimationV9.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C2 /* StickmanAnimationV9.swift */; };
+		0000000000000000000000D3 /* CinematicEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C3 /* CinematicEngine.swift */; };
+		0000000000000000000000D4 /* CinematicScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000C4 /* CinematicScenes.swift */; };
 		0000000000000000000000A6 /* StickmanWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A1 /* StickmanWidget.swift */; };
 		0000000000000000000000A7 /* StickmanWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 0000000000000000000000A0 /* StickmanWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -35,6 +40,11 @@
 		0000000000000000000000A1 /* StickmanWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanWidget.swift; sourceTree = "<group>"; };
 		0000000000000000000000A2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0000000000000000000000A3 /* FloatingStickman.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingStickman.swift; sourceTree = "<group>"; };
+		0000000000000000000000C0 /* StickmanAnimationV7.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanAnimationV7.swift; sourceTree = "<group>"; };
+		0000000000000000000000C1 /* StickmanAnimationV8.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanAnimationV8.swift; sourceTree = "<group>"; };
+		0000000000000000000000C2 /* StickmanAnimationV9.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanAnimationV9.swift; sourceTree = "<group>"; };
+		0000000000000000000000C3 /* CinematicEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CinematicEngine.swift; sourceTree = "<group>"; };
+		0000000000000000000000C4 /* CinematicScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CinematicScenes.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +118,11 @@
 				000000000000000000000024 /* StickmanView.swift */,
 				000000000000000000000025 /* StickmanAnimation.swift */,
 				0000000000000000000000A3 /* FloatingStickman.swift */,
+				0000000000000000000000C0 /* StickmanAnimationV7.swift */,
+				0000000000000000000000C1 /* StickmanAnimationV8.swift */,
+				0000000000000000000000C2 /* StickmanAnimationV9.swift */,
+				0000000000000000000000C3 /* CinematicEngine.swift */,
+				0000000000000000000000C4 /* CinematicScenes.swift */,
 				000000000000000000000028 /* Assets.xcassets */,
 				000000000000000000000029 /* Info.plist */,
 			);
@@ -230,6 +245,11 @@
 				000000000000000000000037 /* StickmanView.swift in Sources */,
 				000000000000000000000038 /* StickmanAnimation.swift in Sources */,
 				0000000000000000000000A5 /* FloatingStickman.swift in Sources */,
+				0000000000000000000000D0 /* StickmanAnimationV7.swift in Sources */,
+				0000000000000000000000D1 /* StickmanAnimationV8.swift in Sources */,
+				0000000000000000000000D2 /* StickmanAnimationV9.swift in Sources */,
+				0000000000000000000000D3 /* CinematicEngine.swift in Sources */,
+				0000000000000000000000D4 /* CinematicScenes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
