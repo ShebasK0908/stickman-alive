@@ -63,14 +63,14 @@ struct SkeletonPose {
     var hipDX: CGFloat = 0
     var neckOff: CGPoint = CGPoint(x: 0, y: -42)
     var headOff: CGPoint = CGPoint(x: 0, y: -23)
-    var elbowL: CGPoint = CGPoint(x: -17, y: 19)
-    var handL: CGPoint = CGPoint(x: -20, y: 40)
-    var elbowR: CGPoint = CGPoint(x: 17, y: 19)
-    var handR: CGPoint = CGPoint(x: 20, y: 40)
-    var kneeL: CGPoint = CGPoint(x: -11, y: 27)
-    var footL: CGPoint = CGPoint(x: -13, y: 56)
-    var kneeR: CGPoint = CGPoint(x: 11, y: 27)
-    var footR: CGPoint = CGPoint(x: 13, y: 56)
+    var elbowL: CGPoint = CGPoint(x: -18, y: 20)
+    var handL: CGPoint = CGPoint(x: -22, y: 43)
+    var elbowR: CGPoint = CGPoint(x: 18, y: 20)
+    var handR: CGPoint = CGPoint(x: 22, y: 43)
+    var kneeL: CGPoint = CGPoint(x: -12, y: 28)
+    var footL: CGPoint = CGPoint(x: -17, y: 56)
+    var kneeR: CGPoint = CGPoint(x: 12, y: 28)
+    var footR: CGPoint = CGPoint(x: 17, y: 56)
     var squash: CGFloat = 1
 
     static let standing = SkeletonPose()

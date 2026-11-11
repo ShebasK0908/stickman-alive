@@ -149,11 +149,11 @@ enum FloatingRenderer {
         let j = joints(pose: pose, cx: engine.x, ground: ground, facing: engine.facing)
         let ink = CGColor(red: 0.945, green: 0.506, blue: 0.047, alpha: 1)
 
-        // Aura amarilla cuando suelta un poder
+        // Aura cuando suelta un poder: pegada al cuerpo, sin huevo gigante
         if engine.mode == .power {
-            let auraAlpha = 0.16 + 0.06 * sin(engine.animTime * 6)
+            let auraAlpha = 0.12 + 0.04 * sin(engine.animTime * 6)
             ctx.setFillColor(CGColor(red: 1.0, green: 0.85, blue: 0.1, alpha: CGFloat(auraAlpha)))
-            ctx.fillEllipse(in: CGRect(x: engine.x - 70, y: ground - 180, width: 140, height: 180))
+            ctx.fillEllipse(in: CGRect(x: engine.x - 55, y: ground - 170, width: 110, height: 170))
         }
 
         // Efectos de poder
@@ -182,13 +182,19 @@ enum FloatingRenderer {
             }
         }
 
-        // Cuerpo: mismos trazos redondos que en la app
+        // Cuerpo: miembros CURVOS como trazo de pincel, igual que en la
+        // app (cuadratica que pasa por la articulacion, sin angulo duro)
+        func limb(_ path: CGMutablePath, _ a: CGPoint, _ joint: CGPoint, _ b: CGPoint) {
+            let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+            let control = CGPoint(x: 2 * joint.x - mid.x, y: 2 * joint.y - mid.y)
+            path.move(to: a); path.addQuadCurve(to: b, control: control)
+        }
         let body = CGMutablePath()
         body.move(to: j.hip); body.addLine(to: j.neck)
-        body.move(to: j.hip); body.addLine(to: j.kneeL); body.addLine(to: j.footL)
-        body.move(to: j.hip); body.addLine(to: j.kneeR); body.addLine(to: j.footR)
-        body.move(to: j.neck); body.addLine(to: j.elbowL); body.addLine(to: j.handL)
-        body.move(to: j.neck); body.addLine(to: j.elbowR); body.addLine(to: j.handR)
+        limb(body, j.hip, j.kneeL, j.footL)
+        limb(body, j.hip, j.kneeR, j.footR)
+        limb(body, j.neck, j.elbowL, j.handL)
+        limb(body, j.neck, j.elbowR, j.handR)
         ctx.setStrokeColor(ink)
         ctx.setLineWidth(10)
         ctx.setLineCap(.round)
@@ -196,9 +202,10 @@ enum FloatingRenderer {
         ctx.addPath(body)
         ctx.strokePath()
 
-        // Cabeza de ANILLO hueco, con el squash del clip
-        let headH = 40 * pose.squash
-        let headW = 40 * (1 + (1 - pose.squash) * 0.55)
+        // Cabeza de ANILLO hueco, con el squash AMORTIGUADO (0.93–1.07)
+        let sq = min(1.07, max(0.93, pose.squash))
+        let headH = 40 * sq
+        let headW = 40 * (1 + (1 - sq) * 0.55)
         ctx.setStrokeColor(ink)
         ctx.setLineWidth(9.5)
         ctx.strokeEllipse(in: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH))

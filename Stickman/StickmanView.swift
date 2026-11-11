@@ -61,12 +61,14 @@ struct StickmanCanvasView: View {
             drawObject(context: &context, object: object, groundY: groundY, stickmanX: cx, effectiveGround: effectiveGround)
         }
 
-        // Aura del despertar de The Second Coming
-        if c.isAwakened {
+        // Aura del despertar: SOLO mientras usa un poder o vuela (en los
+        // videos el aura ESTRELLA al despertar y al atacar; en reposo no
+        // hay huevo amarillo permanente). Pegada al cuerpo, naranja suave.
+        if c.isAwakened && (c.action == .usingPower || c.action == .flying) {
             var aura = context
-            aura.opacity = 0.16 + 0.07 * sin(c.phase * 6)
-            let rect = CGRect(x: cx - 62, y: effectiveGround - 168, width: 124, height: 168)
-            aura.fill(Path(ellipseIn: rect), with: .color(.yellow))
+            aura.opacity = 0.10 + 0.04 * sin(c.phase * 6)
+            let rect = CGRect(x: cx - 50, y: effectiveGround - 158, width: 100, height: 158)
+            aura.fill(Path(ellipseIn: rect), with: .color(.orange))
         }
         // Imagenes fantasma de la supervelocidad
         if c.activePower == .superSpeed {
@@ -253,17 +255,26 @@ struct StickmanCanvasView: View {
 
     private func drawMiniFriend(context: inout GraphicsContext, ox: CGFloat, groundY: CGFloat) {
         let color: Color = Color(red: 0.15, green: 0.45, blue: 0.9)
-        let hip = CGPoint(x: ox, y: groundY - 44)
-        let neck = CGPoint(x: ox, y: groundY - 76)
-        let head = CGPoint(x: ox, y: groundY - 92)
+        let t = controller.phase
+        // Vida propia (antes era una estatua clavada en el suelo):
+        // respira con un bob suave, cambia el peso de un pie a otro,
+        // deambula unos pasos alrededor de su sitio y saluda sin parar.
+        let bob = CGFloat(sin(t * 2.2)) * 1.6
+        let x = ox + CGFloat(sin(t * 0.13)) * 10
+        let shift = CGFloat(sin(t * 1.1)) * 2.2
+        let hip = CGPoint(x: x, y: groundY - 44 + bob)
+        let neck = CGPoint(x: x, y: groundY - 76 + bob)
+        let head = CGPoint(x: x + CGFloat(sin(t * 0.7)) * 2, y: groundY - 92 + bob)
         var p = Path()
         p.move(to: hip); p.addLine(to: neck)
-        p.move(to: hip); p.addLine(to: CGPoint(x: ox - 12, y: groundY)); p.move(to: hip); p.addLine(to: CGPoint(x: ox + 12, y: groundY))
-        let wave = CGFloat(sin(controller.phase * 7)) * 7
-        p.move(to: neck); p.addLine(to: CGPoint(x: ox - 16, y: groundY - 62))
-        p.move(to: neck); p.addLine(to: CGPoint(x: ox + 18, y: groundY - 96 + wave))
-        context.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 4, lineCap: .round))
-        context.stroke(Path(ellipseIn: CGRect(x: head.x - 13, y: head.y - 13, width: 26, height: 26)), with: .color(color), lineWidth: 4)
+        p.move(to: hip); p.addLine(to: CGPoint(x: x - 12 + shift, y: groundY))
+        p.move(to: hip); p.addLine(to: CGPoint(x: x + 12 - shift, y: groundY))
+        let wave = CGFloat(sin(t * 7)) * 7
+        let sway = CGFloat(sin(t * 1.7)) * 3
+        p.move(to: neck); p.addLine(to: CGPoint(x: x - 16, y: groundY - 62 + bob + sway))
+        p.move(to: neck); p.addLine(to: CGPoint(x: x + 18, y: groundY - 96 + wave))
+        context.stroke(p, with: .color(color), style: StrokeStyle(lineWidth: 4.5, lineCap: .round))
+        context.stroke(Path(ellipseIn: CGRect(x: head.x - 13, y: head.y - 13, width: 26, height: 26)), with: .color(color), lineWidth: 4.5)
     }
 
     // MARK: Efectos de poder (fuego / laser / hielo / onda de choque)
@@ -425,18 +436,31 @@ struct StickmanCanvasView: View {
         let color: Color = c.action == .drawn ? .gray : bodyColor
         let lw = c.kind.lineWidth
 
+        // Miembros CURVOS como trazos de pincel (el plano del usuario:
+        // brazos y piernas son arcos suaves, no segmentos rectos con
+        // angulo de marioneta). Cada miembro es una cuadratica de
+        // extremo a extremo cuyo control (2*articulacion - punto medio)
+        // hace que la curva PASE por la articulacion: la pose manda lo
+        // mismo, pero sin codos/rodillas duros.
+        func limb(_ path: inout Path, _ a: CGPoint, _ joint: CGPoint, _ b: CGPoint) {
+            let mid = CGPoint(x: (a.x + b.x) / 2, y: (a.y + b.y) / 2)
+            let control = CGPoint(x: 2 * joint.x - mid.x, y: 2 * joint.y - mid.y)
+            path.move(to: a); path.addQuadCurve(to: b, control: control)
+        }
         var body = Path()
         body.move(to: j.hip); body.addLine(to: j.neck)
-        body.move(to: j.hip); body.addLine(to: j.kneeL); body.addLine(to: j.footL)
-        body.move(to: j.hip); body.addLine(to: j.kneeR); body.addLine(to: j.footR)
-        body.move(to: j.neck); body.addLine(to: j.elbowL); body.addLine(to: j.handL)
-        body.move(to: j.neck); body.addLine(to: j.elbowR); body.addLine(to: j.handR)
+        limb(&body, j.hip, j.kneeL, j.footL)
+        limb(&body, j.hip, j.kneeR, j.footR)
+        limb(&body, j.neck, j.elbowL, j.handL)
+        limb(&body, j.neck, j.elbowR, j.handR)
         ctx.stroke(body, with: .color(color), style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
 
-        // Cabeza de ANILLO hueco (con el squash del clip): 40x40 con
-        // trazo 9.5 — el diseno fijado de The Second Coming (DISENO-TCO.md).
-        let headH = 40 * pose.squash
-        let headW = 40 * (1 + (1 - pose.squash) * 0.55)
+        // Cabeza de ANILLO hueco: 40x40 con trazo 9.5 (DISENO-TCO.md).
+        // El squash del clip se AMORTIGUA en la cabeza (0.93–1.07): el
+        // anillo se deforma un pelin, no se vuelve gelatina.
+        let sq = min(1.07, max(0.93, pose.squash))
+        let headH = 40 * sq
+        let headW = 40 * (1 + (1 - sq) * 0.55)
         ctx.stroke(Path(ellipseIn: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH)),
                    with: .color(color), lineWidth: 9.5)
 
