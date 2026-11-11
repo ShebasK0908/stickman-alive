@@ -5,8 +5,9 @@ import AppIntents
 // MARK: - Widget de pantalla de inicio — v5
 //
 // The Second Coming vive en la pantalla de inicio. Dibujo 100% procedural
-// con SwiftUI Canvas (mismas proporciones y cabeza de anillo que en la app:
-// cadera a 56, cuello a -42, cabeza a -23, cabeza de anillo de 40).
+// con SwiftUI Canvas (mismas proporciones que la app: escala global
+// 0,8 aplicada en el Canvas, cuello x1,06 y cabeza x1,28, anillo de
+// 52 — espejo de ViewTuning en StickmanView).
 //
 // Las poses ROTAN por la timeline (de pie, caminando, sentado,
 // durmiendo, pose de poder) y los botones (iOS 17+, App Intents)
@@ -120,11 +121,17 @@ private struct StickmanCanvas: View {
 
     var body: some View {
         Canvas { ctx, size in
-            let scale: CGFloat = min(size.width, size.height) / 150
+            // Escala global 0,8 de la figura, como en app y PiP (el
+            // usuario: figura mas pequena); el resto del lienzo no.
+            let scale: CGFloat = min(size.width, size.height) / 150 * 0.8
             ctx.translateBy(x: size.width / 2, y: size.height - 4)
             ctx.scaleBy(x: scale, y: scale)
 
-            let pose = widgetPose(kind, phase: phase)
+            var pose = widgetPose(kind, phase: phase)
+            // Proporciones espejo de ViewTuning: torso x1,06 y cabeza
+            // x1,28 sobre los offsets de la pose.
+            pose.neckOff.y *= 1.06
+            pose.headOff.y *= 1.28
             let f: CGFloat = 1
             func fromHip(_ p: CGPoint, hip: CGPoint) -> CGPoint { CGPoint(x: hip.x + p.x * f, y: hip.y + p.y) }
             func fromNeck(_ p: CGPoint, neck: CGPoint) -> CGPoint { CGPoint(x: neck.x + p.x * f, y: neck.y + p.y) }
@@ -142,11 +149,12 @@ private struct StickmanCanvas: View {
             floor.addLine(to: CGPoint(x: size.width / scale / 2 - 4, y: 0))
             ctx.stroke(floor, with: .color(.gray.opacity(0.5)), lineWidth: 2.5 / scale * 1.6)
 
-            // Aura del modo poder / fuego: pegada al cuerpo
+            // Aura del modo poder / fuego: pegada al cuerpo (cubre la
+            // figura con la cabeza grande: alto total ~156 uds.)
             if kind == .power || kind == .fire {
                 var aura = ctx
                 aura.opacity = 0.14
-                aura.fill(Path(ellipseIn: CGRect(x: -48, y: -160, width: 96, height: 160)), with: .color(.orange))
+                aura.fill(Path(ellipseIn: CGRect(x: -52, y: -174, width: 104, height: 174)), with: .color(.orange))
             }
             // Llama del boton Fuego
             if kind == .fire {
@@ -176,12 +184,16 @@ private struct StickmanCanvas: View {
             limb(&body, neck, elbowR, handR)
             ctx.stroke(body, with: .color(ink), style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
 
-            // Cabeza de anillo hueco, squash amortiguado como en la app
+            // Cabeza de anillo hueco GRANDE (52 uds. de figura, espejo
+            // de ViewTuning.headDiameter), squash amortiguado como en
+            // la app. Trazo del anillo 8,5 uds. (espejo de headStroke);
+            // el del cuerpo queda en 10 uds. PORQUE el Canvas ya
+            // aplica el 0,8: la proporcion trazo/alto sale la misma.
             let sq = min(1.07, max(0.93, pose.squash))
-            let headH = 40 * sq
-            let headW = 40 * (1 + (1 - sq) * 0.55)
+            let headH = 52 * sq
+            let headW = 52 * (1 + (1 - sq) * 0.55)
             ctx.stroke(Path(ellipseIn: CGRect(x: head.x - headW / 2, y: head.y - headH / 2, width: headW, height: headH)),
-                       with: .color(ink), lineWidth: 9.5)
+                       with: .color(ink), lineWidth: 8.5)
         }
     }
 }
