@@ -613,25 +613,126 @@ final class StickmanController: ObservableObject {
     func cinematicEnsureObject(_ kind: DrawnObjectKind) { ensureObject(kind) }
     var canUndoStrokes: Bool { !strokeHistory.isEmpty }
 
-    /// Altura (mundo) de la plataforma que forma un trazo casi horizontal bajo x, si la hay.
-    func strokeGroundHeight(at px: CGFloat) -> CGFloat? {
+    /// ¿Es este tramo de trazo CAMINABLE (suelo) y no pared?
+    /// Pendiente RELATIVA por tramo: |dy| <= 0,5·|dx| + 0,75 (~27°).
+    /// El filtro anterior era absoluto (|dy| > 26 = pared) y fallaba
+    /// en los dos extremos (feedback 23:20, prioridad 1):
+    /// - Un muro dibujado DESPACIO (puntos cada ~3 pt) colaba como
+    ///   suelo: sus tramitos verticales pasaban el filtro y la parte
+    ///   ALTA del muro se devolvia como suelo (atravesaba la silla
+    ///   dibujada y «subia» por las paredes).
+    /// - Una rampa dibujada RAPIDO (puntos lejos, |dy| > 26) no
+    ///   registraba suelo en absoluto: caia entre plataformas.
+    private func strokeSegmentWalkable(_ a: CGPoint, _ b: CGPoint) -> Bool {
+        abs(b.y - a.y) <= abs(b.x - a.x) * 0.5 + 0.75
+    }
+
+    /// Altura (mundo) de la plataforma que forma un trazo caminable
+    /// bajo x, si la hay. `notAbove` acota la busqueda a lo que puede
+    /// pisar DESDE donde esta: sin tope, cualquier trazo horizontal
+    /// por encima (la mesa dibujada sobre su cabeza) se convertia en
+    /// su suelo y «subia» de golpe al pasar por debajo.
+    func strokeGroundHeight(at px: CGFloat, notAbove cap: CGFloat = .greatestFiniteMagnitude) -> CGFloat? {
         var best: CGFloat? = nil
         for stroke in userStrokes {
             guard stroke.points.count > 1 else { continue }
             for i in 0..<(stroke.points.count - 1) {
                 let a = stroke.points[i], b = stroke.points[i + 1]
-                if abs(b.y - a.y) > 26 { continue }             // solo tramos caminables
+                if !strokeSegmentWalkable(a, b) { continue }             // solo tramos caminables
                 let minX = min(a.x, b.x) - 6, maxX = max(a.x, b.x) + 6
                 if px < minX || px > maxX { continue }
                 let span = b.x - a.x
-                let y = span == 0 ? max(a.y, b.y) : a.y + (b.y - a.y) * (px - a.x) / span
+                let y = span == 0 ? max(a.y, b.y) : a.y + (b.y - a.y) * min(1, max(0, (px - a.x) / span))
+                if y > cap { continue }
                 if best == nil || y > best! { best = y }
             }
         }
         return best
     }
-    private func groundTotalHeight(at px: CGFloat) -> CGFloat {
-        max(platformHeight, strokeGroundHeight(at: px) ?? 0)
+
+    /// Suelo que forman los OBJETOS que el propio stickman dibuja
+    /// (su silla, su mesa, su bloque): la parte de arriba se puede
+    /// pisar igual que un trazo del usuario. Alturas y anchos = los
+    /// del dibujo en StickmanView.drawObject.
+    private func objectGroundHeight(at px: CGFloat, notAbove cap: CGFloat) -> CGFloat? {
+        var best: CGFloat? = nil
+        for o in objects where o.state == .intact {
+            let top: CGFloat
+            let halfW: CGFloat
+            switch o.kind {
+            case .chair: top = 22; halfW = 20
+            case .table: top = 30; halfW = 30
+            case .block: top = 38; halfW = 21
+            default: continue
+            }
+            if top > cap { continue }
+            if abs(px - o.x) <= halfW, best == nil || top > best! { best = top }
+        }
+        return best
+    }
+
+    /// Suelo total que se puede pisar en px: plataforma del mundo,
+    /// trazos del usuario y objetos dibujados, siempre bajo `cap`.
+    private func groundTotalHeight(at px: CGFloat, notAbove cap: CGFloat) -> CGFloat {
+        var g = platformHeight
+        if let s = strokeGroundHeight(at: px, notAbove: cap), s > g { g = s }
+        if let o = objectGroundHeight(at: px, notAbove: cap), o > g { g = o }
+        return g
+    }
+
+    /// Colision LATERAL con lo dibujado (feedback 23:20, prioridad 1:
+    /// «chocar con los lados»): los tramos EMPINADOS de los trazos del
+    /// usuario y los objetos altos (bloque, casita) son PAREDES. Si su
+    /// borde delantero cruza la pared entre prevX y x, se queda pegado
+    /// a ella. Solo caminando por el suelo: agarrado, escapando,
+    /// volando o en el aire mandan el dedo y la fisica.
+    private func collideWithDrawnWalls(prevX: CGFloat) {
+        guard surface == .floor, !isAirborne, !isDragged else { return }
+        guard action != .grabbed, action != .escaping, action != .flying else { return }
+        let moved = x - prevX
+        guard abs(moved) > 0.01 else { return }
+        let dir: CGFloat = moved > 0 ? 1 : -1
+        let halfBody: CGFloat = 10
+        let feet = platformHeight + heightAboveGround
+        let bodyTop = feet + 118   // ~su cabeza dibujada: por encima, pasa por debajo
+        // Paredes de trazos: tramos NO caminables (empinados).
+        for stroke in userStrokes {
+            guard stroke.points.count > 1 else { continue }
+            for i in 0..<(stroke.points.count - 1) {
+                let a = stroke.points[i], b = stroke.points[i + 1]
+                if strokeSegmentWalkable(a, b) { continue }
+                let lo = min(a.y, b.y), hi = max(a.y, b.y)
+                // La pared debe cruzar su cuerpo: lo que queda bajo
+                // los pies es suelo/escalon; lo de mas arriba, aire.
+                if hi < feet + 8 || lo > bodyTop { continue }
+                // X de la pared a la altura de sus rodillas.
+                let yTest = min(max(feet + 12, lo), hi)
+                let t = (b.y - a.y) != 0 ? (yTest - a.y) / (b.y - a.y) : 0.5
+                let wallX = a.x + (b.x - a.x) * min(1, max(0, t))
+                if dir > 0 {
+                    if prevX + halfBody <= wallX && x + halfBody > wallX { x = wallX - halfBody }
+                } else {
+                    if prevX - halfBody >= wallX && x - halfBody < wallX { x = wallX + halfBody }
+                }
+            }
+        }
+        // Paredes de objetos altos intactos: bloque (38) y casita (52).
+        for o in objects where o.state == .intact {
+            let top: CGFloat
+            let halfW: CGFloat
+            switch o.kind {
+            case .block: top = 38; halfW = 21
+            case .doorHouse: top = 52; halfW = 22
+            default: continue
+            }
+            if feet >= top - 6 { continue }   // esta ENCIMA de el: es suelo, no pared
+            let left = o.x - halfW, right = o.x + halfW
+            if dir > 0 {
+                if prevX + halfBody <= left && x + halfBody > left { x = left - halfBody }
+            } else {
+                if prevX - halfBody >= right && x - halfBody < right { x = right + halfBody }
+            }
+        }
     }
 
     // MARK: Interaccion tactil: el dedo ES el cursor del animador (modo cursor)
@@ -1114,10 +1215,15 @@ final class StickmanController: ObservableObject {
                 velocityY -= gravity * CGFloat(dt) * (isWallSliding ? 0.25 : 1)
                 // v8 dive: cayendo muy rapido y despierto, entra en picado
                 if velocityY < -700, isAwakened, action == .jumping { action = .diving }
+                let feetBeforeFall = heightAboveGround   // pies ANTES de integrar la caida (para el tope)
                 heightAboveGround += velocityY * CGFloat(dt)
                 x += velocityX * CGFloat(dt); velocityX *= 0.985
                 moveSpeed = 0
-                let ground = groundTotalHeight(at: x) - platformHeight
+                // Tope: solo aterriza en superficies que ya estaban a
+                // la altura de sus pies (o 2 pt por encima) ANTES de
+                // caer este frame; nada de engancharse a un trazo que
+                // le pasa por encima a mitad de caida.
+                let ground = groundTotalHeight(at: x, notAbove: platformHeight + feetBeforeFall + 2) - platformHeight
                 if heightAboveGround <= ground {
                     let impact = -velocityY
                     heightAboveGround = ground; velocityY = 0; velocityX = 0
@@ -1268,7 +1374,11 @@ final class StickmanController: ObservableObject {
     private func groundSnap(dt: Double) {
         if action == .flying || action == .escapeBurst || isDragged { return }
         if surface != .floor { return }   // v3: anclado a pared/techo no hay suelo que ajustar
-        let target = groundTotalHeight(at: x) - platformHeight
+        // Tope = sus pies + escalon SUBIBLE (26): el asiento de una
+        // silla dibujada (~22) lo sube; el tablero de una mesa (~30+)
+        // ya no — camina por debajo y choca con las patas (paredes).
+        let stepUp: CGFloat = 26
+        let target = groundTotalHeight(at: x, notAbove: platformHeight + heightAboveGround + stepUp) - platformHeight
         if heightAboveGround < target - 1 {
             heightAboveGround = target      // sube a la plataforma/trazo (escalon)
         } else if heightAboveGround > target + 5 {
@@ -1389,6 +1499,7 @@ final class StickmanController: ObservableObject {
             _ = updateSurfaceLocomotion(dt: dt)
             return
         }
+        let xBeforeMove = x   // para la colision lateral con lo dibujado (al final)
         // v3 Trip: corriendo (o persiguiendo al dedo) puede tropezar, como en la spec
         if tripCooldown <= 0, moveSpeed > 145, action == .running || action == .chasingFinger {
             if Double.random(in: 0...1) < dt * 0.055 {
@@ -1436,6 +1547,9 @@ final class StickmanController: ObservableObject {
         if action == .grabbingFinger && fingerTracker.present {
             x += (fingerTracker.point.x - x) * CGFloat(min(1, dt * 7))
         }
+        // Tras moverse: chocar con las paredes dibujadas (trazos
+        // empinados y objetos altos), no atravesarlas.
+        collideWithDrawnWalls(prevX: xBeforeMove)
     }
 
     private func clampToStage(_ width: CGFloat) {
