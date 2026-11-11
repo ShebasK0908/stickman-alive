@@ -22,7 +22,7 @@ enum StickmanAction: String, CaseIterable {
     case shrugging     // Se encoge de hombros
     case thumbsUp      // Pulgar arriba
     case hiding        // Escondido tras un objeto/interfaz
-    case powerPose     // Pose de poder: entra el Modo Chosen One
+    case powerPose     // Pose de poder: entra el Modo Second Coming
     case flying        // Volando con estela
     case usingPower    // Usando el poder activo (ver activePower)
     // v3 — roaming 360° (superficies) y vida de bordes
@@ -42,6 +42,63 @@ enum StickmanAction: String, CaseIterable {
     // v6 — clips nuevos cableados en la integracion de la auditoria
     case gettingUp     // Levantarse del suelo tras tropezar (clip getUp)
     case escapeBurst   // Romper la caja de seleccion al escapar del agarre (clip escapeBurst)
+    // Integracion v7/v8/v9 — casos nuevos con disparador (el resto de clips
+    // de las tandas vive en AnimationLibraryV7/V8/V9 y se usa por
+    // refinamiento de la vista o queda en libreria, como hitReact en la v6)
+    case jetFlight        // v7 flameJet: vuelo vertical propulsado por las manos
+    case uppercut         // v7: gancho que levanta
+    case flyingKick       // v7: patada voladora
+    case tackling         // v7: placaje de hombro
+    case snatching        // v7 snatchTool: arrebatar la herramienta
+    case typing           // v7 typeFrenzy: teclear frenetico
+    case pushingHeavy     // v7 pushHeavy: empujar peso con todo el cuerpo
+    case peeking          // v7 peekCorner: asomarse a una esquina
+    case crawling         // v7 crawl: avanzar a cuatro patas
+    case swingingRope     // v7 swingRope: columpiarse agarrado arriba
+    case meditating       // v7 meditate: meditar levitando
+    case exercising       // v7 pushUps: flexiones
+    case jumpRoping       // v7 jumpRope: saltar a la comba
+    case eating           // v7 eatSnack: comerse una merienda dibujada
+    case drinking         // v7 drinkSip: beber de un vaso dibujado
+    case sneezing         // v7 sneeze: estornudo con suspense
+    case hiccuping        // v7 hiccup: hipo irregular
+    case walkingBack      // v8 walkBack: caminar hacia atras vigilando
+    case sneaking         // v8 sneak: locomocion furtiva de puntillas
+    case carryingLoaded   // v8 walkLoaded: caminar cargando peso en alto
+    case throwingLoaded   // v9 throwLoaded: lanzar la carga que llevaba
+    case fallingWithObject // v9 fallWithObject: caer abrazando la carga
+    case handstanding     // v8 handstand: el pino completo
+    case tightroping      // v8 tightrope: equilibrio en un borde fino
+    case oneHandHanging   // v8 oneHandHang: colgarse de una sola mano
+    case backKicking      // v8 backKick: patada trasera
+    case kneeStriking     // v8 kneeStrike: rodillazo con agarre
+    case elbowStriking    // v8 elbowStrike: codazo de distancia cero
+    case headbutting      // v8 headbutt: cabezazo (tambien le duele)
+    case leaningBack      // v8 leanBack: esquiva arqueandose
+    case chargingFireball // v8 fireCharge: cargar la bola de fuego entre las palmas
+    case diving           // v8 dive: picado desde el vuelo
+    case clapping         // v8 clap: aplaudir
+    case bowing           // v8 bow: reverencia
+    case begging          // v8 beg: suplicar de rodillas
+    case impatient        // v8: golpeteo de pie impaciente
+    case shivering        // v8 shiver: temblar de frio abrazandose
+    case beckoning        // v8 beckon: gesto «ven aqui»
+    case highFiving       // v8 highFive: chocar los cinco con el dedo
+    case groundPounding   // v9 groundPound: punetazo descendente al suelo
+    case feinting         // v9 feint: amago de jab
+    case sidestepping     // v9 sidestep: paso lateral de esquiva
+    case parrying         // v9 palmParry: desviar con la palma
+    case fingerShielding  // v9 fingerShield: atrincherarse tras el dedo
+    case stretching       // v9 stretchSide: estiramiento lateral
+    case noddingOff       // v9 nodOff: cabecear dormido de pie
+    case sleepRolling     // v9 sleepRoll: rodar dormido al otro lado
+    case inspecting       // v9 crouchInspect: agacharse a mirar una cosita
+    case releasingBird    // v9 releaseBird: soltar la criatura voladora que dibujo
+    case pettingCreature  // v9 petCreature: acariciar a su criatura
+    case feedingCreature  // v9 feedCreature: dar de comer a su criatura
+    case ridingHorse      // v9 rideHorse: trote a caballo (mimo)
+    case conducting       // v9 conduct: dirigir a sus criaturas con el lapiz-batuta
+    case wallJumping      // v9 wallJump: impulso desde la pared
     // v4: salen las acciones sociales del duo (chasingPeer, sparring,
     // hugging, hugged, hugOffer) y los unicos de Victim (lassoSpin,
     // stabbing, cursorSetup, working): la app es de UN personaje.
@@ -88,7 +145,7 @@ enum StickmanAction: String, CaseIterable {
         case .shrugging: return "yo qué sé"
         case .thumbsUp: return "¡bien!"
         case .hiding: return "aquí no me ves..."
-        case .powerPose: return "modo Chosen One..."
+        case .powerPose: return "a despertar..."
         case .flying: return "¡a volaaar!"
         case .usingPower: return ""
         case .wallClimbing: return ""
@@ -105,6 +162,60 @@ enum StickmanAction: String, CaseIterable {
         case .sittingFacingFinger: return ""
         case .gettingUp: return ""
         case .escapeBurst: return "¡me escapo!"
+        case .jetFlight: return "¡propulsión!"
+        case .uppercut: return "¡gancho!"
+        case .flyingKick: return "¡patada voladora!"
+        case .tackling: return "¡placaje!"
+        case .snatching: return "¡mío!"
+        case .typing: return "tacatacataca..."
+        case .pushingHeavy: return "¡empuja...!"
+        case .peeking: return "¿hay alguien?"
+        case .crawling: return ""
+        case .swingingRope: return "¡columpio!"
+        case .meditating: return "ooom..."
+        case .exercising: return "¡una, dos...!"
+        case .jumpRoping: return ""
+        case .eating: return "ñam ñam"
+        case .drinking: return "¡ahh!"
+        case .sneezing: return "¡achís!"
+        case .hiccuping: return "hip..."
+        case .walkingBack: return "me voy... pero te vigilo"
+        case .sneaking: return "con sigilo..."
+        case .carryingLoaded: return "¡cómo pesa!"
+        case .throwingLoaded: return "¡ahí va eso!"
+        case .fallingWithObject: return "¡no lo suelto!"
+        case .handstanding: return "¡mirad, el pino!"
+        case .tightroping: return "equilibrio..."
+        case .oneHandHanging: return "con una mano, sobrado"
+        case .backKicking: return "¡patada trasera!"
+        case .kneeStriking: return "¡rodillazo!"
+        case .elbowStriking: return "¡codazo!"
+        case .headbutting: return "¡cabezazo!"
+        case .leaningBack: return "¡casi!"
+        case .chargingFireball: return "cargo la bola..."
+        case .diving: return "¡en picado!"
+        case .clapping: return "¡bravo!"
+        case .bowing: return "gracias, gracias"
+        case .begging: return "hazme caso..."
+        case .impatient: return "¿y ahora qué?"
+        case .shivering: return "¡brr!"
+        case .beckoning: return "ven, anda"
+        case .highFiving: return "¡choca esos cinco!"
+        case .groundPounding: return "¡al suelo!"
+        case .feinting: return "¡amago!"
+        case .sidestepping: return "¡por aquí no!"
+        case .parrying: return "¡desviado!"
+        case .fingerShielding: return "¡detrás de ti no me da!"
+        case .stretching: return "qué bien sienta"
+        case .noddingOff: return "zzz... ¿eh?"
+        case .sleepRolling: return "zzz..."
+        case .inspecting: return "¿qué es esto?"
+        case .releasingBird: return "¡vuela, vuela!"
+        case .pettingCreature: return "buen chico..."
+        case .feedingCreature: return "toma, come"
+        case .ridingHorse: return "¡a cabalgar!"
+        case .conducting: return "¡orquesta!"
+        case .wallJumping: return "¡desde la pared!"
         }
     }
 }
@@ -119,16 +230,16 @@ enum StickmanAction: String, CaseIterable {
 //  * IA TACTIL (StickmanBrain.InteractionBrain + FingerTracker):
 //    percibe el dedo (distancia, velocidad, acercamiento) -> decide
 //    (curioso, saludar, huir, esquivar, bloquear, agarrar el dedo,
-//    contraatacar, mini-Chosen, esconderse, escudo) -> ejecuta el clip.
+//    contraatacar, mini-despertar, esconderse, escudo) -> ejecuta el clip.
 //  * HERRAMIENTAS DEL USUARIO reales: modos cursor/lapiz/goma; los
 //    trazos del lapiz son persistentes y FISICOS (puede subirse a ellos).
 
 final class StickmanController: ObservableObject {
 
-    // v4: identidad del personaje (solo The Chosen One)
+    // Identidad del personaje (solo The Second Coming)
     let kind: CharacterKind
 
-    init(kind: CharacterKind = .chosenOne) {
+    init(kind: CharacterKind = .secondComing) {
         self.kind = kind
         self.x = kind.startX
         self.drives = kind.initialDrives
@@ -182,8 +293,8 @@ final class StickmanController: ObservableObject {
     @Published var activitySeconds: Double = 0      // desde el ultimo descanso (objetivo 120)
     @Published var restSecondsLeft: Double = 0
 
-    // Poderes / Chosen One
-    @Published var isChosenOne: Bool = false
+    // Poderes / Despertar
+    @Published var isAwakened: Bool = false
     @Published var activePower: Power? = nil
     @Published var shakeAmount: CGFloat = 0
     @Published var frozenPatchX: CGFloat? = nil
@@ -213,7 +324,7 @@ final class StickmanController: ObservableObject {
     private var thoughtTimer: Double = 0
     private var microTimer: Double = 0
     private var emitTimer: Double = 0
-    private var chosenAuraTimer: Double = 0
+    private var awakeningAuraTimer: Double = 0
     private var frozenTimer: Double = 0
     private var tapTimestamps: [Double] = []
     private var elapsed: Double = 0
@@ -250,6 +361,11 @@ final class StickmanController: ObservableObject {
     private var isDragged: Bool = false
     private var dragTime: Double = 0
     @Published var dragEscapeSignal: Int = 0   // la vista lo observa para soltar el gesto
+
+    // Cinematicas (CinematicEngine.swift): pausa del cerebro, pose impuesta, cuerpo oculto
+    @Published var cinematicHold = false
+    @Published var cinematicPose: SkeletonPose? = nil
+    @Published var cinematicHidden = false
 
     // Deshacer (historial de trazos del usuario)
     private var strokeHistory: [[UserStroke]] = []
@@ -344,6 +460,8 @@ final class StickmanController: ObservableObject {
         let probability = obedienceProbability(for: suggested)
         if Double.random(in: 0...1) <= probability {
             startOverride(suggested, duration: durationFor(suggested))
+            // v9: tras dormir, a veces rueda dormido al otro lado (sleepRoll)
+            if suggested == .sleeping { sleepRollPending = true }
             if suggested == .sword { ensureObject(.sword); swordProgress = 0 }
             if Double.random(in: 0...1) < 0.35 { setThought("vale, lo hago") }
             drives.registerKindPlay(); memory.kindPlays += 1
@@ -359,13 +477,13 @@ final class StickmanController: ObservableObject {
         }
     }
 
-    func suggestChosenOne() {
-        guard isAlive, !isResting, kind == .chosenOne else { return }
+    func suggestAwakening() {
+        guard isAlive, !isResting, kind == .secondComing else { return }
         let p = 0.35 + drives.mischief / 200 + drives.anger / 250
         if Double.random(in: 0...1) <= p {
-            plan = Bool.random() ? PlanLibrary.trainChosenOne() : PlanLibrary.showOffPowers()
+            plan = Bool.random() ? PlanLibrary.trainSecondComing() : PlanLibrary.showOffPowers()
             planStepStarted = false; mode = .plan
-            setThought("¡MODO CHOSEN ONE!")
+            setThought("¡MODO SECOND COMING!")
         } else {
             startOverride(.denying, duration: 1.5)
             setThought("hoy no me apetece lucirme")
@@ -408,6 +526,10 @@ final class StickmanController: ObservableObject {
         // v6: una cadena pendiente solo sobrevive al arranque de su propio clip
         if a != .tripping { tripChainPending = false }
         if a != .escapeBurst { pendingEscapeThrow = nil }
+        // Integracion v8/v9: cadenas de carga (carryingLoaded -> throwingLoaded)
+        // y de sueno (sleeping -> sleepRoll)
+        if a != .carryingLoaded { loadedChainPending = false }
+        if a != .sleeping { sleepRollPending = false }
         // Sin giros al azar: quien llama (sugerencia, IA o plan) ya ha fijado el rumbo con setFacing.
     }
 
@@ -486,6 +608,9 @@ final class StickmanController: ObservableObject {
         if strokeHistory.count > 12 { strokeHistory.removeFirst() }
         userStrokes = []
     }
+
+    // MARK: Gancho para las cinematicas (CinematicEngine.swift)
+    func cinematicEnsureObject(_ kind: DrawnObjectKind) { ensureObject(kind) }
     var canUndoStrokes: Bool { !strokeHistory.isEmpty }
 
     /// Altura (mundo) de la plataforma que forma un trazo casi horizontal bajo x, si la hay.
@@ -544,9 +669,14 @@ final class StickmanController: ObservableObject {
             setThought("¡auch!")
             return
         }
-        if drives.anger > 72 {
+        if drives.anger > 85 {
+            // v9: furia maxima -> punetazo descendente al suelo (groundPound, onda en 0.64)
+            startOverride(.groundPounding, duration: 1.15)
+            shakeAmount = 12
+            setThought("¡YA ESTÁ BIEN!")
+        } else if drives.anger > 72 {
             plan = PlanLibrary.showOffPowers(); planStepStarted = false; mode = .plan
-            setThought("¡YA ESTÁ BIEN! ¡CHOSEN ONE!")
+            setThought("¡YA ESTÁ BIEN! ¡SECOND COMING!")
         } else if abs(distance) < 46 {
             startOverride(.scared, duration: 0.9)
             setFacing(distance >= 0 ? -1 : 1); scaredBurstX = facing * 240
@@ -613,11 +743,11 @@ final class StickmanController: ObservableObject {
     // MARK: Poderes
 
     private func activatePower(_ power: Power) {
-        // Los poderes son de The Chosen One, el unico personaje (v4).
-        guard kind == .chosenOne else { return }
+        // Los poderes son de The Second Coming, el unico personaje.
+        guard kind == .secondComing else { return }
         if surface != .floor { snapToFloor() }   // los poderes se usan desde el suelo
         activePower = power
-        isChosenOne = true; chosenAuraTimer = 7
+        isAwakened = true; awakeningAuraTimer = 7
         switch power {
         case .flight: action = .flying
         case .superSpeed: action = .running
@@ -649,6 +779,12 @@ final class StickmanController: ObservableObject {
             else { frozenPatchX = x; frozenTimer = 9 }
         case .superStrength:
             if let idx = objects.firstIndex(where: { $0.kind == .block && $0.state == .lifted }) { objects[idx].state = .intact; objects[idx].x = clampedObjectX(x + facing * 70) }
+            // v8/v9: a veces se lo lleva cargando (walkLoaded) y al soltarlo lo lanza (throwLoaded)
+            if Double.random(in: 0...1) < 0.5 {
+                startOverride(.carryingLoaded, duration: 2.0)
+                loadedChainPending = true
+                setThought("esto lo llevo yo")
+            }
         default: break
         }
         if activePower == power { activePower = nil }
@@ -675,6 +811,8 @@ final class StickmanController: ObservableObject {
         isResting = false; activitySeconds = 0; action = .idle
         drives.energy = max(drives.energy, 78)
         setThought("¡otra vez a ello!")
+        // v9: al despertar, a veces se estira de lado a lado (stretchSide)
+        if Double.random(in: 0...1) < 0.4 { startOverride(.stretching, duration: 2.4) }
         if let paused = pausedPlan, Double.random(in: 0...1) < 0.55 {
             plan = paused; planStepStarted = false; setThought("sigo con lo mío")
         } else { plan = nil }
@@ -695,7 +833,7 @@ final class StickmanController: ObservableObject {
         if busy.contains(action) { return }
 
         // ChaseMouse: si el dedo esta a media distancia, sin violencia
-        // y TCO esta curioso, lo PERSIGUE corriendo por el suelo; al
+        // y TSC esta curioso, lo PERSIGUE corriendo por el suelo; al
         // llegar se sienta a mirarlo.
         if surface == .floor, chaseCooldown <= 0, !isChasingFinger {
             let distF = fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62)
@@ -708,6 +846,20 @@ final class StickmanController: ObservableObject {
                 setFacing(fingerTracker.point.x >= x ? 1 : -1)
                 startOverride(.chasingFinger, duration: 2.6)
                 setThought("¡a por ese dedo!")
+                return
+            }
+        }
+
+        // v9 fingerShield: con acoso alto y el dedo quieto y cerca, se
+        // atrinchera DETRAS del dedo en vez de huir o pelear.
+        if interactionBrain.harassment > 55, fingerTracker.speed < 120 {
+            let distF2 = fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62)
+            if distF2 < 120, surface == .floor {
+                lastDecision = "atrincherarse tras el dedo"
+                iaCooldown = 2.2
+                setFacing(fingerTracker.point.x >= x ? 1 : -1)
+                startOverride(.fingerShielding, duration: 1.7)
+                setThought("¡detrás de ti no me da!")
                 return
             }
         }
@@ -731,14 +883,26 @@ final class StickmanController: ObservableObject {
         case .none: break
         case .curious:
             setFacing(fingerX >= x ? 1 : -1)
-            if abs(fingerX - x) > 110 { startOverride(.walking, duration: 1.0) }
+            if abs(fingerX - x) > 110 {
+                // v7/v8: a veces se asoma a espiar o le hace el gesto de «ven aqui»
+                let roll = Double.random(in: 0...1)
+                if roll < 0.25 { startOverride(.peeking, duration: 2.6) }
+                else if roll < 0.5 { startOverride(.beckoning, duration: 1.6); setThought("ven, anda") }
+                else { startOverride(.walking, duration: 1.0) }
+            }
             else { startOverride(.idle, duration: 0.9) }
             setThought(decision.thought)
         case .greet:
             greetCooldown = 6
             setFacing(fingerX >= x ? 1 : -1)
-            startOverride(.waving, duration: 1.6)
-            setThought(decision.thought)
+            // v8: la mitad de las veces choca los cinco en vez de saludar
+            if Double.random(in: 0...1) < 0.5 {
+                startOverride(.highFiving, duration: 1.4)
+                setThought("¡choca esos cinco!")
+            } else {
+                startOverride(.waving, duration: 1.6)
+                setThought(decision.thought)
+            }
         case .flee:
             setFacing(fingerX >= x ? -1 : 1)
             startOverride(.fleeing, duration: 1.1)
@@ -751,14 +915,28 @@ final class StickmanController: ObservableObject {
             dodgeBurst = 250; dodgeBurstTimer = 0.55
             startOverride(.rolling, duration: 0.62)
             setThought(decision.thought)
+        case .leanBack:
+            startOverride(.leaningBack, duration: 0.9)
+            setThought(decision.thought)
+        case .sidestep:
+            setFacing(fingerX >= x ? -1 : 1)
+            dodgeBurst = 200; dodgeBurstTimer = 0.5
+            startOverride(.sidestepping, duration: 0.7)
+            setThought(decision.thought)
         case .jumpOver:
             setFacing(fingerX >= x ? 1 : -1)
             setThought(decision.thought)
             performJump(vx: facing * 250)
         case .block:
             setFacing(fingerX >= x ? 1 : -1)
-            startOverride(.blocking, duration: 0.85)
-            setThought(decision.thought)
+            // v9: a veces desvia con la palma en vez de absorber el golpe (y queda cargado para contraatacar)
+            if Double.random(in: 0...1) < 0.45 {
+                startOverride(.parrying, duration: 0.8)
+                setThought("¡desviado!")
+            } else {
+                startOverride(.blocking, duration: 0.85)
+                setThought(decision.thought)
+            }
         case .grabFinger:
             setFacing(fingerX >= x ? 1 : -1)
             startOverride(.grabbingFinger, duration: 1.2)
@@ -766,14 +944,30 @@ final class StickmanController: ObservableObject {
             setThought(decision.thought)
         case .counterAttack:
             setFacing(fingerX >= x ? 1 : -1)
-            startOverride(.fighting, duration: 2.6)
-            setThought(decision.thought)
-        case .miniChosen:
+            // Integracion v7/v8/v9: el contraataque rota entre la rafaga y
+            // los golpes sueltos nuevos segun distancia y acoso acumulado.
+            let dist = abs(fingerX - x)
+            let pick = (Int(interactionBrain.harassment) + Int(dist)) % 7
+            if dist > 120 {
+                startOverride(.tackling, duration: 1.1)   // v7: a media distancia, placaje
+                setThought("¡placaje!")
+            } else {
+                switch pick {
+                case 0: startOverride(.uppercut, duration: 1.05); setThought("¡gancho!")
+                case 1: startOverride(.backKicking, duration: 0.9); setThought("¡patada trasera!")
+                case 2: startOverride(.kneeStriking, duration: 0.85); setThought("¡rodillazo!")
+                case 3: startOverride(.elbowStriking, duration: 0.8); setThought("¡codazo!")
+                case 4: startOverride(.headbutting, duration: 0.95); setThought("¡cabezazo!")
+                case 5: startOverride(.feinting, duration: 0.9); setThought("¡amago!")   // v9: finta y a otra cosa
+                default: startOverride(.fighting, duration: 2.6); setThought(decision.thought)
+                }
+            }
+        case .miniAwakening:
             setFacing(fingerX >= x ? 1 : -1)
             setThought(decision.thought)
             startOverride(.usingPower, duration: 0.9)
             activatePower(.superPunch)
-            chosenAuraTimer = 2.5
+            awakeningAuraTimer = 2.5
         case .hide:
             if let idx = nearestIntactObjectIndex() {
                 hideTargetX = objects[idx].x - facing * 6
@@ -806,6 +1000,11 @@ final class StickmanController: ObservableObject {
         // Tiempo en la accion actual (reloj de los clips)
         if action != lastAction { animTime = 0; lastAction = action } else { animTime += dt }
         if isGrabbingFinger && action != .grabbingFinger { isGrabbingFinger = false }
+
+        // Cinematicas: con el hold activo solo avanzan fase, animTime y
+        // particulas (ya actualizados arriba); cerebro, planes y fisica
+        // quedan congelados hasta que la escena devuelve el control.
+        if cinematicHold { return }
 
         // Pensamiento: caduca
         if thoughtTimer > 0 { thoughtTimer -= dt; if thoughtTimer <= 0 { thought = "" } }
@@ -842,8 +1041,8 @@ final class StickmanController: ObservableObject {
             }
         }
 
-        // Aura Chosen One
-        if chosenAuraTimer > 0 { chosenAuraTimer -= dt; if chosenAuraTimer <= 0, activePower == nil { isChosenOne = false } }
+        // Aura del despertar
+        if awakeningAuraTimer > 0 { awakeningAuraTimer -= dt; if awakeningAuraTimer <= 0, activePower == nil { isAwakened = false } }
         if frozenTimer > 0 { frozenTimer -= dt; if frozenTimer <= 0 { frozenPatchX = nil } }
         if shakeAmount > 0 { shakeAmount = max(0, shakeAmount - dt * 26) }
         if swordProgress < 1, action == .sword { swordProgress = min(1, swordProgress + dt / 0.8) }
@@ -913,6 +1112,8 @@ final class StickmanController: ObservableObject {
                 isWallSliding = (atLeftWall || atRightWall) && velocityY < -60 && heightAboveGround > 4
                 if isWallSliding { velocityY = max(velocityY, -135) }  // se desliza frenando contra la pared
                 velocityY -= gravity * CGFloat(dt) * (isWallSliding ? 0.25 : 1)
+                // v8 dive: cayendo muy rapido y despierto, entra en picado
+                if velocityY < -700, isAwakened, action == .jumping { action = .diving }
                 heightAboveGround += velocityY * CGFloat(dt)
                 x += velocityX * CGFloat(dt); velocityX *= 0.985
                 moveSpeed = 0
@@ -923,6 +1124,8 @@ final class StickmanController: ObservableObject {
                     isWallSliding = false
                     if jumpWindup <= 0 {
                         if impact > 980 { startOverride(.rolling, duration: 0.62); overrideLandingChain = .dizzy }
+                        // v7 crawl: a veces aterriza a cuatro patas y avanza arrastrandose
+                        else if impact > 430, Double.random(in: 0...1) < 0.3 { startOverride(.crawling, duration: 1.1) }
                         else if impact > 430 { startOverride(.landing, duration: 0.42) }
                         // v3 Bounce: a veces rebota de contento al aterrizar suave
                         else if Double.random(in: 0...1) < 0.22 { startOverride(.bouncing, duration: 0.9) }
@@ -959,6 +1162,19 @@ final class StickmanController: ObservableObject {
                     // v6: trip acaba en la pose del suelo (0.5 s) -> encadena getUp
                     tripChainPending = false
                     startOverride(.gettingUp, duration: 1.05)
+                } else if loadedChainPending {
+                    // v9: fin de caminar cargado -> lanza la carga (throwLoaded, la vista suelta el objeto a 0.5)
+                    loadedChainPending = false
+                    startOverride(.throwingLoaded, duration: 1.2)
+                    setThought("¡ahí va eso!")
+                } else if sleepRollPending {
+                    // v9: dormido, a veces rueda entero al otro lado sin despertarse (sleepRoll)
+                    sleepRollPending = false
+                    if Double.random(in: 0...1) < 0.5 {
+                        startOverride(.sleepRolling, duration: 1.8)
+                    } else {
+                        mode = .plan; if plan == nil { planGapTimer = 0.3 }
+                    }
                 } else {
                     mode = .plan; if plan == nil { planGapTimer = 0.3 }
                 }
@@ -979,7 +1195,16 @@ final class StickmanController: ObservableObject {
                     if planGapTimer <= 0 {
                         planGapTimer = 0.8
                         if surface.isWall {
-                            if Double.random(in: 0...1) < 0.45 { detachAndFall() }
+                            let roll = Double.random(in: 0...1)
+                            if roll < 0.45 { detachAndFall() }
+                            else if roll < 0.57 {
+                                // v9 wallJump: se impulsa desde la pared en diagonal
+                                let dirOut: CGFloat = surface == .wallLeft ? 1 : -1
+                                surface = .floor; platformHeight = 0
+                                velocityY = 300; velocityX = dirOut * 230
+                                action = .wallJumping; mode = .physics
+                                setThought("¡desde la pared!")
+                            }
                             else {
                                 climbDir = heightAboveGround < ceilingClearance * 0.5 ? 1 : -1
                                 startOverride(.wallClimbing, duration: 2.2)
@@ -993,6 +1218,15 @@ final class StickmanController: ObservableObject {
                 }
                 action = .idle
                 moveSpeed = 0
+                // v9 nodOff: con la energia baja se duerme DE PIE a ratos,
+                // antes de llegar a tumbarse (pre-grado de sleep).
+                if drives.energy < 32, Double.random(in: 0...1) < dt * 0.08 {
+                    startOverride(.noddingOff, duration: 3.0)
+                    setThought("zzz... ¿eh?")
+                    groundSnap(dt: dt)
+                    clampToStage(stageWidth)
+                    return
+                }
                 if planGapTimer <= 0 {
                     plan = PlanLibrary.choosePlan(drives: drives, memory: memory, perception: perception)
                     planStepStarted = false
@@ -1006,7 +1240,7 @@ final class StickmanController: ObservableObject {
                     startSurfaceStep(step)
                     if let obj = step.objectToDraw { ensureObject(obj) }
                     if let power = step.power { activatePower(power) }
-                    else if step.action == .powerPose, kind == .chosenOne { isChosenOne = true; chosenAuraTimer = 7 }
+                    else if step.action == .powerPose, kind == .secondComing { isAwakened = true; awakeningAuraTimer = 7 }
                     if step.action == .flying { activatePower(.flight) }
                     if !step.thought.isEmpty { setThought(step.thought) }
                 }
@@ -1027,6 +1261,8 @@ final class StickmanController: ObservableObject {
     private var overrideLandingChain: StickmanAction? = nil
     private var tripChainPending = false        // v6: tras trip (0.5 s) encadena getUp
     private var pendingEscapeThrow: (vx: CGFloat, vy: CGFloat)? = nil  // v6: lanzamiento al terminar escapeBurst
+    private var loadedChainPending = false      // v8/v9: tras carryingLoaded encadena throwingLoaded
+    private var sleepRollPending = false        // v9: tras sleeping puede encadenar sleepRolling
 
     /// Si el suelo (plataforma o trazo del usuario) sube/baja bajo sus pies, se ajusta o cae.
     private func groundSnap(dt: Double) {
@@ -1037,7 +1273,8 @@ final class StickmanController: ObservableObject {
             heightAboveGround = target      // sube a la plataforma/trazo (escalon)
         } else if heightAboveGround > target + 5 {
             velocityY = 0; mode = .physics   // el suelo desaparece: cae
-            action = .jumping
+            // v9: si iba cargando, cae abrazando la carga (fallWithObject)
+            action = action == .carryingLoaded ? .fallingWithObject : .jumping
         }
     }
 
@@ -1045,7 +1282,7 @@ final class StickmanController: ObservableObject {
         // v3: destino del paso (x fija)
         let destX: CGFloat? = step.targetX >= 0 ? step.targetX : nil
         if let dest = destX, surface == .floor,
-           [.walking, .running, .usingTool].contains(step.action) {
+           [.walking, .running, .usingTool, .sneaking, .ridingHorse].contains(step.action) {
             setFacing(dest >= x ? 1 : -1)
             if abs(dest - x) < 16 { stepArrived = true }
         }
@@ -1097,6 +1334,11 @@ final class StickmanController: ObservableObject {
         case .fighting: return 24
         case .chasingFinger: return 196   // v3 ChaseMouse: Dash de la spec
         case .scared: return 0   // el retroceso va por scaredBurstX
+        case .sneaking: return 26        // v8: sigilo de puntillas, lento de verdad
+        case .walkingBack: return 40     // v8: hacia atras, prudente
+        case .crawling: return 30        // v7: a cuatro patas
+        case .carryingLoaded: return 34  // v8: cargado, pasos cortos
+        case .ridingHorse: return 120    // v9: al trote
         default: return 0
         }
     }
@@ -1178,7 +1420,9 @@ final class StickmanController: ObservableObject {
             moveSpeed = max(target, moveSpeed - (isSkidding ? 640 : 460) * CGFloat(dt))
         }
         if moveSpeed > 0.5 && !isAirborne {
-            x += facing * moveSpeed * CGFloat(dt)
+            // v8: en walkingBack mira al destino pero AVANZA de espaldas
+            let travelDir: CGFloat = action == .walkingBack ? -facing : facing
+            x += travelDir * moveSpeed * CGFloat(dt)
             // Fase de zancada ligada a la velocidad: a mas velocidad, ciclo mas rapido y largo
             let strideLength = 62 + speedNorm * 38
             gaitPhase01 += Double(moveSpeed / strideLength) * dt

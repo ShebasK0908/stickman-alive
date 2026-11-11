@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-// MARK: - Poderes como The Chosen One
+// MARK: - Poderes de The Second Coming
 
 enum Power: String, CaseIterable {
     case flight        // Volar / despegar con estela

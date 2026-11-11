@@ -4,10 +4,10 @@ import SwiftUI
 // La pose se MUESTREA de los clips de keyframes de StickmanAnimation.swift
 // (con blend caminar<->correr segun velocidad).
 //
-// v4: UN personaje, The Chosen One (negro, trazo solido, cabeza llena
-// como nuestro dibujo de siempre). Roaming 360: en el TECHO el cuerpo
-// se dibuja INVERTIDO (ancla en el borde superior, balanceo swing) y en
-// las PAREDES trepa/colgado junto al borde.
+// UN personaje, The Second Coming (naranja, trazo 10, cabeza de ANILLO
+// hueco 40x40 con trazo 9.5, numeros de DISENO-TCO.md). Roaming 360: en
+// el TECHO el cuerpo se dibuja INVERTIDO (ancla en el borde superior,
+// balanceo swing) y en las PAREDES trepa/colgado junto al borde.
 
 struct StickmanCanvasView: View {
     @ObservedObject var controller: StickmanController
@@ -61,8 +61,8 @@ struct StickmanCanvasView: View {
             drawObject(context: &context, object: object, groundY: groundY, stickmanX: cx, effectiveGround: effectiveGround)
         }
 
-        // Aura del Modo Chosen One (solo TCO puede tenerla)
-        if c.isChosenOne {
+        // Aura del despertar de The Second Coming
+        if c.isAwakened {
             var aura = context
             aura.opacity = 0.16 + 0.07 * sin(c.phase * 6)
             let rect = CGRect(x: cx - 62, y: effectiveGround - 168, width: 124, height: 168)
@@ -74,7 +74,10 @@ struct StickmanCanvasView: View {
             drawStickman(context: &context, cx: cx - c.facing * 68, ground: effectiveGround, size: size, opacity: 0.10)
         }
         drawPowerEffects(context: &context, size: size, groundY: groundY, effectiveGround: effectiveGround)
-        drawStickman(context: &context, cx: cx, ground: effectiveGround, size: size, opacity: 1.0)
+        // Cinematicas: el cuerpo puede ocultarse (transicion de Nacimiento)
+        if !c.cinematicHidden {
+            drawStickman(context: &context, cx: cx, ground: effectiveGround, size: size, opacity: 1.0)
+        }
         // El objeto tras el que se esconde se dibuja DELANTE de el
         if let hid = c.hidingObjectID, let object = c.objects.first(where: { $0.id == hid }) {
             drawObject(context: &context, object: object, groundY: groundY, stickmanX: cx, effectiveGround: effectiveGround)
@@ -308,9 +311,13 @@ struct StickmanCanvasView: View {
 
     private func currentPose() -> SkeletonPose {
         let c = controller
+        // Cinematicas: si la escena impone una pose, manda ella
+        if let cinematic = c.cinematicPose { return cinematic }
         // Superficies primero: la pose manda el ancla
         if c.surface == .ceiling {
             if c.action == .hangingCeiling { return AnimationLibrary.hangCeil.sample(at: c.animTime) }
+            // v7: agarrado arriba y columpiandose, el balanceo es swingRope
+            if c.action == .swingingRope { return AnimationLibraryV7.swingRope.sample(at: c.animTime) }
             return AnimationLibrary.swingCeil.sample(at: c.gaitPhase01 * AnimationLibrary.swingCeil.duration)
         }
         if c.surface.isWall {
@@ -328,7 +335,7 @@ struct StickmanCanvasView: View {
             if c.velocityY > 80 { return AnimationLibrary.jumpStretch.sample(at: min(c.animTime, 0.3)) }
             return AnimationLibrary.fallPose.sample(at: c.animTime)
         }
-        // v6: supervelocidad de TCO = rafaga horizontal (flyDash), no el sprint normal
+        // v6: supervelocidad = rafaga horizontal (flyDash), no el sprint normal
         if c.action == .running, c.activePower == .superSpeed {
             return AnimationLibrary.flyDash.sample(at: c.animTime)
         }
@@ -341,8 +348,28 @@ struct StickmanCanvasView: View {
         case .climbing:
             return AnimationLibrary.climb.sample(at: c.gaitPhase01 * AnimationLibrary.climb.duration * 1.4)
         case .usingPower:
+            // v8: con el despertar activo, el fuego se anuncia cargando la
+            // bola entre las palmas (fireCharge) y la superfuerza levanta
+            // el bloque ENORME por encima de la cabeza (liftHuge).
+            if c.activePower == .fireBreath, c.isAwakened, c.animTime < 1.5 {
+                return AnimationLibraryV8.fireCharge.sample(at: c.animTime)
+            }
+            if c.activePower == .superStrength, c.animTime < 1.7 {
+                return AnimationLibraryV8.liftHuge.sample(at: c.animTime)
+            }
             if let power = c.activePower { return AnimationLibrary.clip(forPower: power).sample(at: c.animTime) }
             return AnimationLibrary.powerPose.sample(at: c.animTime)
+        case .landing:
+            // v7: despierto, el aterrizaje es de heroe (heroLanding)
+            if c.isAwakened { return AnimationLibraryV7.heroLanding.sample(at: c.animTime) }
+            return AnimationLibrary.landing.sample(at: c.animTime)
+        case .sitting:
+            // v8/v9: sentado, a veces gira solo la cabeza (sitSpinHead);
+            // sin silla intacta cerca, se sienta cruzado en el suelo (sitCrossed)
+            if c.microActivity == "mira a un lado" { return AnimationLibraryV8.sitSpinHead.sample(at: c.animTime) }
+            let chairNear = c.objects.contains { $0.kind == .chair && $0.state == .intact && abs($0.x - c.x) < 60 }
+            if !chairNear { return AnimationLibraryV9.sitCrossed.sample(at: c.animTime) }
+            return AnimationLibrary.sit.sample(at: c.animTime)
         case .grabbed, .escaping:
             // v3 pose pinch: se estira/inclina hacia el lado del tiron (spec: 7 variantes)
             var pose = AnimationLibrary.clip(for: c.action).sample(at: c.animTime)
@@ -406,12 +433,12 @@ struct StickmanCanvasView: View {
         body.move(to: j.neck); body.addLine(to: j.elbowR); body.addLine(to: j.handR)
         ctx.stroke(body, with: .color(color), style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
 
-        // Cabeza LLENA/solida (con squash vertical del clip): asi es TCO
-        // en AvA 2 y asi es nuestro dibujo de siempre, el que el usuario aprobo.
+        // Cabeza de ANILLO hueco (con el squash del clip): 40x40 con
+        // trazo 9.5 — el diseno fijado de The Second Coming (DISENO-TCO.md).
         let headH = 40 * pose.squash
         let headW = 40 * (1 + (1 - pose.squash) * 0.55)
-        ctx.fill(Path(ellipseIn: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH)),
-                 with: .color(color))
+        ctx.stroke(Path(ellipseIn: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH)),
+                   with: .color(color), lineWidth: 9.5)
 
         // Herramientas/objetos EN LA MANO segun la accion
         let hand = j.handR
@@ -453,6 +480,40 @@ struct StickmanCanvasView: View {
             // Bloque de la interfaz usado como ESCUDO delante del cuerpo
             let shieldCenter = CGPoint(x: cx + f * 34, y: ground - 72)
             ctx.stroke(Path(CGRect(x: shieldCenter.x - 19, y: shieldCenter.y - 24, width: 38, height: 48)), with: .color(.purple), lineWidth: 4.5)
+        }
+        // Props de las acciones nuevas (v7/v8/v9): sin ellos el mimo no se lee
+        if c.action == .eating {
+            // Merienda dibujada en la mano que sube a la boca
+            ctx.fill(Path(ellipseIn: CGRect(x: hand.x - 7, y: hand.y - 7, width: 14, height: 14)), with: .color(Color(red: 0.45, green: 0.75, blue: 0.35)))
+        }
+        if c.action == .drinking {
+            // Vaso en la mano
+            ctx.stroke(Path(CGRect(x: hand.x - 6, y: hand.y - 12, width: 12, height: 14)), with: .color(Color(red: 0.3, green: 0.6, blue: 0.9)), lineWidth: 3)
+        }
+        if c.action == .snatching || c.action == .conducting {
+            // Herramienta arrebatada / lapiz-batuta: palo fino en la mano
+            var baton = Path(); baton.move(to: hand); baton.addLine(to: CGPoint(x: hand.x + unit.x * 34, y: hand.y + unit.y * 34))
+            ctx.stroke(baton, with: .color(Color(red: 0.95, green: 0.75, blue: 0.15)), lineWidth: 4)
+        }
+        if c.action == .typing {
+            // Dos botones de la interfaz bajo sus manos freneticas
+            for dx in [-26.0, 8.0] {
+                ctx.stroke(Path(CGRect(x: cx + dx, y: ground - 12, width: 30, height: 10)), with: .color(.gray), lineWidth: 2.5)
+            }
+        }
+        if c.action == .pushingHeavy {
+            // El peso que empuja: bloque grande delante, a ras de suelo
+            ctx.stroke(Path(CGRect(x: cx + f * 30 - 24, y: ground - 46, width: 48, height: 46)), with: .color(.gray), lineWidth: 4.5)
+        }
+        if c.action == .carryingLoaded || c.action == .throwingLoaded {
+            // La carga sobre la cabeza (el objeto que sujetan las manos en alto)
+            ctx.stroke(Path(CGRect(x: j.head.x - 17, y: j.head.y - 52, width: 34, height: 30)), with: .color(Color(red: 0.6, green: 0.45, blue: 0.3)), lineWidth: 4)
+        }
+        if c.action == .groundPounding, c.animTime > 0.55, c.animTime < 1.1 {
+            // Onda de choque del punetazo al suelo (impacto a los 0.64 s)
+            let r = 20 + (c.animTime - 0.55) * 130
+            var wave = Path(); wave.addEllipse(in: CGRect(x: cx - r, y: ground - 7, width: r * 2, height: 14))
+            ctx.stroke(wave, with: .color(.orange.opacity(0.7)), lineWidth: 3)
         }
         _ = size
     }

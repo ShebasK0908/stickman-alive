@@ -50,21 +50,21 @@ struct UserStroke: Identifiable {
     var points: [CGPoint] = []
 }
 
-// MARK: Personaje v4 (SOLO uno: The Chosen One)
+// MARK: Personaje (SOLO uno: The Second Coming)
 
-/// v4: la app es de UN solo personaje, The Chosen One, por decision del
+/// v4: la app es de UN solo personaje, The Second Coming, por decision del
 /// usuario. Se mantiene el tipo como identidad (color, trazo, arranque e
 /// impulsos iniciales de su personalidad: poderoso y desafiante,
 /// travesura y energia altas; se enfada y se luce).
 enum CharacterKind {
-    case chosenOne
+    case secondComing
 
-    var displayName: String { "The Chosen One" }
-    var shortName: String { "TCO" }
-    /// Color del trazo: negro casi puro, como TCO en los videos (AvA 2).
-    var colorRGB: (r: Double, g: Double, b: Double) { (0.07, 0.07, 0.07) }
+    var displayName: String { "The Second Coming" }
+    var shortName: String { "TSC" }
+    /// Color del trazo: naranja (241,129,12), como TSC en los videos (AvA 4).
+    var colorRGB: (r: Double, g: Double, b: Double) { (0.945, 0.506, 0.047) }
     var startX: CGFloat { 190 }
-    var lineWidth: CGFloat { 6.0 }
+    var lineWidth: CGFloat { 10.0 }
 
     var initialDrives: Drives {
         Drives(energy: 92, curiosity: 58, playfulness: 58, mischief: 56, sociability: 50, boredom: 8, anger: 5)
@@ -145,11 +145,13 @@ enum InteractionDecision: String {
     case flee = "huir corriendo"
     case dodgeDuck = "esquivar agachándose"
     case dodgeRoll = "esquivar rodando"
+    case leanBack = "esquivar arqueándose"
+    case sidestep = "paso lateral"
     case jumpOver = "saltar por encima del dedo"
     case block = "bloquear"
     case grabFinger = "agarrar el dedo"
     case counterAttack = "contraatacar"
-    case miniChosen = "mini Chosen One"
+    case miniAwakening = "mini despertar"
     case hide = "esconderse"
     case shield = "usar objeto como escudo/arma"
 
@@ -161,11 +163,13 @@ enum InteractionDecision: String {
         case .flee: return "¡a mí no me pillas!"
         case .dodgeDuck: return "¡eh!"
         case .dodgeRoll: return "¡no me atrapas!"
+        case .leanBack: return "¡casi!"
+        case .sidestep: return "¡por aquí no!"
         case .jumpOver: return "¡por encima!"
         case .block: return "¡eh! ¡para!"
         case .grabFinger: return "¡te tengo, dedo!"
         case .counterAttack: return "¡toma! ¡y toma!"
-        case .miniChosen: return "¡YA ESTÁ BIEN!"
+        case .miniAwakening: return "¡YA ESTÁ BIEN!"
         case .hide: return "aquí no me ves..."
         case .shield: return "¡con mi escudo!"
         }
@@ -204,14 +208,16 @@ struct InteractionBrain {
 
         // Muy cerca y viniendo rapido: defensa inmediata, escala con el acoso
         if dist < 74 && (closingFast || fast) {
-            if harassment > 78 { return .miniChosen }
+            if harassment > 78 { return .miniAwakening }
             if harassment > 52 { return .counterAttack }
             if hasShieldObject && harassment > 30 { return .shield }
             if drives.energy < 30 && hasHidingSpot { return .hide }
-            // Esquiva variada: agacharse, rodar o saltar por encima
-            switch (Int(harassment) + Int(dist)) % 3 {
+            // Esquiva variada: agacharse, rodar, arquearse, paso lateral o saltar por encima
+            switch (Int(harassment) + Int(dist)) % 5 {
             case 0: return .dodgeDuck
             case 1: return .dodgeRoll
+            case 2: return .leanBack
+            case 3: return .sidestep
             default: return .jumpOver
             }
         }
@@ -344,9 +350,11 @@ enum PlanLibrary {
         Plan(name: "Explorar la interfaz", steps: [
             PlanStep(action: .walking, duration: 1.6, thought: "¿qué hay por allí?"),
             PlanStep(action: .climbing, duration: 2.2, thought: "¡subo a la línea de tiempo!", targetPlatform: 46),
+            PlanStep(action: .snatching, duration: 1.0, thought: "¡esa herramienta es mía!"),
             PlanStep(action: .usingTool, duration: 2.4, thought: "esta herramienta es mía ahora"),
             PlanStep(action: .walking, duration: 1.4, thought: "", targetPlatform: 0),
             PlanStep(action: .climbing, duration: 2.0, thought: "y ahora... ¡a los botones!", targetPlatform: 104),
+            PlanStep(action: .typing, duration: 2.4, thought: "tecleo como un loco"),
             PlanStep(action: .proud, duration: 1.8, thought: "estoy encima de la interfaz 😎")
         ])
     }
@@ -364,16 +372,27 @@ enum PlanLibrary {
     }
     static func drawCreature() -> Plan {
         let kind: DrawnObjectKind = Bool.random() ? .bird : .dog
-        return Plan(name: kind == .bird ? "Dibujar un pajarito" : "Dibujar un perrito", steps: [
-            PlanStep(action: .drawingObject, duration: 1.8, thought: kind == .bird ? "dibujo un pajarito..." : "dibujo un perrito...", objectToDraw: kind),
-            PlanStep(action: .withFriend, duration: 5.0, thought: "¡ha cobrado vida!"),
-            PlanStep(action: .celebrating, duration: 1.6, thought: "")
+        if kind == .bird {
+            return Plan(name: "Dibujar un pajarito", steps: [
+                PlanStep(action: .drawingObject, duration: 1.8, thought: "dibujo un pajarito...", objectToDraw: kind),
+                PlanStep(action: .releasingBird, duration: 2.4, thought: "¡vuela, vuela!"),
+                PlanStep(action: .inspecting, duration: 2.8, thought: "¿qué es esto?"),
+                PlanStep(action: .celebrating, duration: 1.6, thought: "")
+            ])
+        }
+        return Plan(name: "Dibujar un perrito", steps: [
+            PlanStep(action: .drawingObject, duration: 1.8, thought: "dibujo un perrito...", objectToDraw: kind),
+            PlanStep(action: .withFriend, duration: 4.5, thought: "¡ha cobrado vida!"),
+            PlanStep(action: .pettingCreature, duration: 2.6, thought: "buen chico..."),
+            PlanStep(action: .feedingCreature, duration: 2.2, thought: "toma, come"),
+            PlanStep(action: .bowing, duration: 1.8, thought: "gracias, gracias")
         ])
     }
     static func buildHouse() -> Plan {
         Plan(name: "Mi puertita", steps: [
             PlanStep(action: .drawingObject, duration: 1.7, thought: "una puertita para mí", objectToDraw: .doorHouse),
             PlanStep(action: .hammering, duration: 1.8, thought: "y unos clavos", objectToDraw: .hammer),
+            PlanStep(action: .pushingHeavy, duration: 1.6, thought: "esto lo empujo aquí"),
             PlanStep(action: .proud, duration: 2.0, thought: "mi casa"),
             PlanStep(action: .walking, duration: 1.2, thought: "")
         ])
@@ -384,11 +403,13 @@ enum PlanLibrary {
             PlanStep(action: .sword, duration: 4.4, thought: "¡en guardia!")
         ])
     }
-    static func trainChosenOne() -> Plan {
-        Plan(name: "Entrenar como Chosen One", steps: [
-            PlanStep(action: .powerPose, duration: 1.5, thought: "modo Chosen One...", power: nil),
+    static func trainSecondComing() -> Plan {
+        Plan(name: "Entrenar como Second Coming", steps: [
+            PlanStep(action: .powerPose, duration: 1.5, thought: "a despertar...", power: nil),
             PlanStep(action: .flying, duration: 3.0, thought: "¡a volar!", power: .flight),
+            PlanStep(action: .jetFlight, duration: 2.2, thought: "¡vuelo propulsado!"),
             PlanStep(action: .usingPower, duration: 2.0, thought: "¡láser!", power: .eyeLaser),
+            PlanStep(action: .chargingFireball, duration: 1.5, thought: "cargo la bola de fuego..."),
             PlanStep(action: .usingPower, duration: 2.0, thought: "¡fuego!", power: .fireBreath),
             PlanStep(action: .proud, duration: 2.0, thought: "aterrizo orgulloso")
         ])
@@ -412,6 +433,7 @@ enum PlanLibrary {
     static func boredRoutine() -> Plan {
         Plan(name: "Rutina de aburrimiento", steps: [
             PlanStep(action: .yawning, duration: 1.6, thought: "qué aburrimiento..."),
+            PlanStep(action: .impatient, duration: 2.2, thought: "¿y ahora qué?"),
             PlanStep(action: .drawingObject, duration: 1.3, thought: "", objectToDraw: .chair),
             PlanStep(action: .sitting, duration: 4.0, thought: "me siento un rato")
         ])
@@ -421,6 +443,7 @@ enum PlanLibrary {
             PlanStep(action: .waving, duration: 2.0, thought: "¡hola!"),
             PlanStep(action: .dancing, duration: 3.4, thought: "♪ a bailar ♪"),
             PlanStep(action: .celebrating, duration: 1.6, thought: ""),
+            PlanStep(action: .clapping, duration: 1.7, thought: "¡bravo!"),
             PlanStep(action: .laughing, duration: 1.8, thought: "¡ja, ja!")
         ])
     }
@@ -428,7 +451,75 @@ enum PlanLibrary {
         Plan(name: "Está molesto", steps: [
             PlanStep(action: .stomping, duration: 2.2, thought: "¡grr!"),
             PlanStep(action: .shrugging, duration: 1.2, thought: "yo paso"),
-            PlanStep(action: .walking, duration: 1.8, thought: "me voy por ahí")
+            PlanStep(action: .walkingBack, duration: 1.8, thought: "me voy... pero te vigilo")
+        ])
+    }
+
+    // MARK: Planes NUEVOS de la integracion (clips v7/v8/v9)
+
+    /// Calma: medita levitando (clip meditate de la v7).
+    static func calmRoutine() -> Plan {
+        Plan(name: "Meditar", steps: [
+            PlanStep(action: .meditating, duration: 4.6, thought: "mmm... calma"),
+            PlanStep(action: .proud, duration: 1.6, thought: "en paz")
+        ])
+    }
+    /// Ejercicio en el lienzo: flexiones, comba y el pino de show.
+    static func exerciseRoutine() -> Plan {
+        Plan(name: "Ejercicio", steps: [
+            PlanStep(action: .exercising, duration: 3.0, thought: "¡una, dos...!"),
+            PlanStep(action: .jumpRoping, duration: 2.1, thought: "¡y la comba!"),
+            PlanStep(action: .handstanding, duration: 2.9, thought: "¡mirad, el pino!"),
+            PlanStep(action: .celebrating, duration: 1.4, thought: "")
+        ])
+    }
+    /// Se dibuja una merienda y se la come (clips eatSnack/drinkSip de la v7;
+    /// el alimento/vaso lo dibuja la vista en su mano).
+    static func snackRoutine() -> Plan {
+        Plan(name: "Merienda", steps: [
+            PlanStep(action: .eating, duration: 3.4, thought: "¡a comer!"),
+            PlanStep(action: .drinking, duration: 1.8, thought: "y algo de beber")
+        ])
+    }
+    /// Vida misma: un estornudo con todo su suspense (clip sneeze de la v7).
+    static func sneezeRoutine() -> Plan {
+        Plan(name: "Estornudo", steps: [
+            PlanStep(action: .sneezing, duration: 1.35, thought: "¡achís!")
+        ])
+    }
+    /// Hipo irregular: dos hipos por ciclo, 2 ciclos (clip hiccup de la v7).
+    static func hiccupRoutine() -> Plan {
+        Plan(name: "Hipo", steps: [
+            PlanStep(action: .hiccuping, duration: 5.8, thought: "hip... hip...")
+        ])
+    }
+    /// Tiene frio: se abraza y tiembla (clip shiver de la v8).
+    static func shiverRoutine() -> Plan {
+        Plan(name: "Tiene frío", steps: [
+            PlanStep(action: .shivering, duration: 2.4, thought: "¡brr, qué frío!")
+        ])
+    }
+    /// Sin interaccion en mucho rato: suplica atencion (clip beg de la v8).
+    static func begRoutine() -> Plan {
+        Plan(name: "Suplicar atención", steps: [
+            PlanStep(action: .begging, duration: 2.6, thought: "hazme caso..."),
+            PlanStep(action: .beckoning, duration: 1.6, thought: "ven, anda")
+        ])
+    }
+    /// Con 2+ criaturas vivas cerca, las dirige con el lapiz-batuta (clip conduct de la v9).
+    static func conductRoutine() -> Plan {
+        Plan(name: "Dirigir la orquesta", steps: [
+            PlanStep(action: .conducting, duration: 3.0, thought: "¡orquesta, a la una...!"),
+            PlanStep(action: .bowing, duration: 1.8, thought: "gracias, gracias")
+        ])
+    }
+    /// Se dibuja un caballo y cabalga el lienzo (clip rideHorse de la v9;
+    /// el caballo es mimo: la vista no lo dibuja, el avance lo pone el motor).
+    static func horseRoutine(stageWidth: CGFloat) -> Plan {
+        let target: CGFloat = Bool.random() ? 70 : stageWidth - 70
+        return Plan(name: "Cabalgata", steps: [
+            PlanStep(action: .drawingObject, duration: 1.6, thought: "me dibujo un caballo"),
+            PlanStep(action: .ridingHorse, duration: 4.2, thought: "¡a cabalgar!", targetX: target)
         ])
     }
 
@@ -444,8 +535,10 @@ enum PlanLibrary {
             PlanStep(action: .pullingUp, duration: 0.9, thought: "", surfaceGoal: toLeft ? .wallLeft : .wallRight),
             PlanStep(action: .wallClimbing, duration: 3.4, thought: "¡subo, subo!"),
             PlanStep(action: .hangingWall, duration: Double.random(in: 1.6...3.4), thought: "un descansito aquí colgado"),
+            PlanStep(action: .oneHandHanging, duration: 3.0, thought: "con una mano, sobrado"),
             PlanStep(action: .wallClimbing, duration: 3.0, thought: ""),
             PlanStep(action: .ceilingWalking, duration: Double.random(in: 2.6...4.2), thought: "¡boca abajo!", surfaceGoal: .ceiling),
+            PlanStep(action: .swingingRope, duration: 2.8, thought: "¡a columpiarme!"),
             PlanStep(action: .hangingCeiling, duration: Double.random(in: 1.4...2.8), thought: ""),
             PlanStep(action: .dropping, duration: 1.2, thought: "¡me suelto!")
         ])
@@ -454,7 +547,7 @@ enum PlanLibrary {
     static func climbHalfway(toLeft: Bool, stageWidth: CGFloat) -> Plan {
         let wallX: CGFloat = toLeft ? 44 : stageWidth - 44
         return Plan(name: "Trepar a medias", steps: [
-            PlanStep(action: .walking, duration: 3.0, thought: "", targetX: wallX),
+            PlanStep(action: .sneaking, duration: 3.0, thought: "con sigilo...", targetX: wallX),
             PlanStep(action: .pullingUp, duration: 0.9, thought: "", surfaceGoal: toLeft ? .wallLeft : .wallRight),
             PlanStep(action: .wallClimbing, duration: 1.7, thought: ""),
             PlanStep(action: .hangingWall, duration: Double.random(in: 1.8...3.6), thought: "desde aquí se ve todo"),
@@ -468,6 +561,7 @@ enum PlanLibrary {
         return Plan(name: "Piernas colgando", steps: [
             PlanStep(action: .walking, duration: 2.6, thought: "", targetX: edgeX),
             PlanStep(action: .climbing, duration: 1.6, thought: "", targetPlatform: 46),
+            PlanStep(action: .tightroping, duration: 2.6, thought: "equilibrio..."),
             PlanStep(action: .dangling, duration: Double.random(in: 5.0...11.0), thought: "piernas colgando..."),
             PlanStep(action: .pullingUp, duration: 0.8, thought: ""),
             PlanStep(action: .walking, duration: 1.6, thought: "", targetPlatform: 0)
@@ -483,7 +577,7 @@ enum PlanLibrary {
     }
 
     /// Elige un plan pesando los impulsos que compiten + la memoria corta.
-    /// v4: un solo personaje (TCO); el catalogo es el de la v3 sin los
+    /// Un solo personaje (The Second Coming); el catalogo es el de la v3 sin los
     /// planes sociales ni los unicos de Victim, que salieron con el duo.
     static func choosePlan(drives: Drives, memory: ShortMemory, perception: Perception) -> Plan {
         var candidates: [(weight: Double, plan: Plan)] = []
@@ -501,14 +595,28 @@ enum PlanLibrary {
         candidates.append((weight: 7 + drives.boredom * 0.25, plan: lieDownPlan()))
         // El "amigo dibujado" de AvA 4 sigue: es un objeto que cobra vida, no un segundo personaje
         candidates.append((weight: 10 + drives.sociability * 0.55 + Double(memory.kindPlays) * 4, plan: drawFriend()))
+        // Integracion v7/v8/v9: vida nueva del repertorio ampliado
+        candidates.append((weight: 6 + drives.playfulness * 0.25, plan: exerciseRoutine()))
+        candidates.append((weight: 7 + drives.boredom * 0.2, plan: snackRoutine()))
+        candidates.append((weight: 2.5, plan: sneezeRoutine()))
+        candidates.append((weight: 2.0, plan: hiccupRoutine()))
+        candidates.append((weight: 2.0, plan: shiverRoutine()))
+        if drives.energy < 42 { candidates.append((weight: 11, plan: calmRoutine())) }
+        if drives.playfulness > 50 { candidates.append((weight: 6, plan: horseRoutine(stageWidth: perception.stageWidth))) }
+        if perception.aliveObjectKinds.filter({ $0.isCreature }).count >= 2 {
+            candidates.append((weight: 13, plan: conductRoutine()))
+        }
+        if perception.timeSinceLastInteraction > 45 {
+            candidates.append((weight: 15, plan: begRoutine()))
+        }
         if drives.boredom > 55 { candidates.append((weight: 26, plan: boredRoutine())) }
         if drives.playfulness > 58 || drives.sociability > 62 { candidates.append((weight: 22, plan: happyRoutine())) }
         if drives.anger > 48 { candidates.append((weight: 20 + drives.anger * 0.3, plan: moodyRoutine())) }
 
-        // Poderes de The Chosen One: travesura / enfado / memoria -> Chosen One
+        // Poderes de The Second Coming: travesura / enfado / memoria -> despertar
         let powerWeight = drives.mischief * 0.45 + drives.anger * 0.6 + Double(memory.annoyances) * 7
         if powerWeight > 24 {
-            candidates.append((weight: powerWeight, plan: Bool.random() ? trainChosenOne() : showOffPowers()))
+            candidates.append((weight: powerWeight, plan: Bool.random() ? trainSecondComing() : showOffPowers()))
         }
 
         let total = candidates.reduce(0) { $0 + $1.weight }

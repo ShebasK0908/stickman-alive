@@ -1,7 +1,7 @@
 import SwiftUI
 
 // MARK: - Escena: un programa de animacion falso tipo Adobe Animate
-// The Chosen One vive AHI dentro: lienzo, toolbar, timeline y botones son su mundo.
+// The Second Coming vive AHI dentro: lienzo, toolbar, timeline y botones son su mundo.
 //
 // v2 — POR QUE LA TOOLBAR DE LA v1 NO RESPONDIA (diagnostico):
 //  1) Era un VStack de Image(systemName:) SIN botones: puro dibujo.
@@ -14,15 +14,17 @@ import SwiftUI
 // RAMIFICA por el modo activo: cursor = agarrar/tocar, lapiz = trazo,
 // goma = borrar.
 //
-// v4: UN solo personaje en escena — The Chosen One (negro, poderes) —
+// UN solo personaje en escena — The Second Coming (naranja, poderes) —
 // con su controlador y su cerebro. El gesto de arrastre lo agarra a el;
 // el toque reacciona en el; los trazos del usuario son suyos.
 
 struct ContentView: View {
-    @StateObject private var tco = StickmanController(kind: .chosenOne)
+    @StateObject private var tco = StickmanController(kind: .secondComing)
     @ObservedObject private var pip = FloatingPiPManager.shared
+    @StateObject private var cinematics = CinematicCoordinator()
 
     @State private var showBrain = false
+    @State private var showCinematicsMenu = false
     @State private var showConsole = false
     @State private var consoleCount = 0
     @State private var consoleFinishedWait = 0.0
@@ -37,9 +39,9 @@ struct ContentView: View {
     private let consoleText = """
     $ python3 bring_to_life.py
     import stickman
-    tco = dibujar(color = "negro")   # The Chosen One
-    tco.awake()   # esto es broma, como en el video ;)
-    > DESPERTANDO A THE CHOSEN ONE...
+    tsc = dibujar(color = "naranja")   # The Second Coming
+    tsc.awake()   # esto es broma, como en el video ;)
+    > DESPERTANDO A THE SECOND COMING...
     """
 
     var body: some View {
@@ -58,8 +60,10 @@ struct ContentView: View {
                 .padding(.vertical, 5)
         }
         .background(Color(red: 0.16, green: 0.16, blue: 0.18))
+        .onAppear { cinematics.attach(controller: tco) }
         .onReceive(consoleTimer) { _ in typeConsole() }
         .onChange(of: tco.dragEscapeSignal) { _ in if isDraggingHim { isDraggingHim = false; dragChecked = false } }
+        .sheet(isPresented: $showCinematicsMenu) { CinematicMenuView(coordinator: cinematics) }
     }
 
     // MARK: Barra superior
@@ -69,22 +73,25 @@ struct ContentView: View {
             Circle().fill(Color.red).frame(width: 11, height: 11)
             Circle().fill(Color.yellow).frame(width: 11, height: 11)
             Circle().fill(Color.green).frame(width: 11, height: 11)
-            Text("Animate — the_chosen_one.fla")
+            Text("Animate — the_second_coming.fla")
                 .font(.subheadline.bold()).foregroundColor(.white)
                 .lineLimit(1)
             Spacer()
-            if tco.isChosenOne {
-                Text("⚡ CHOSEN ONE")
+            if tco.isAwakened {
+                Text("⚡ SECOND COMING")
                     .font(.caption.bold()).foregroundColor(.black)
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(Color.yellow).cornerRadius(6)
             }
-            Text(tco.isAlive ? "TCO: \(tco.emotion.rawValue)" : "Sin vida")
+            Text(tco.isAlive ? "TSC: \(tco.emotion.rawValue)" : "Sin vida")
                 .font(.caption).foregroundColor(.white.opacity(0.85))
                 .lineLimit(1)
             Button(showBrain ? "🧠▲" : "🧠") { showBrain.toggle() }
                 .font(.headline)
                 .accessibilityLabel("Ver su cerebro")
+            Button("🎬") { showCinematicsMenu = true }
+                .font(.headline)
+                .accessibilityLabel("Cinemáticas")
         }
         .padding(.horizontal, 10).padding(.vertical, 7)
         .background(Color(red: 0.23, green: 0.23, blue: 0.26))
@@ -93,7 +100,7 @@ struct ContentView: View {
     // MARK: Panel del cerebro + IA tactil
 
     private var brainPanel: some View {
-        brainColumn(tco, title: "🧠 The Chosen One (negro)")
+        brainColumn(tco, title: "🧠 The Second Coming (naranja)")
             .padding(.horizontal, 10).padding(.vertical, 6)
             .background(Color(red: 0.20, green: 0.20, blue: 0.23))
     }
@@ -157,6 +164,11 @@ struct ContentView: View {
                     gridOverlay(size: geo.size)
                     StickmanCanvasView(controller: tco)
                         .offset(x: shakeOffset)
+                        // Camara de las cinematicas: zoom sobre el foco de la escena
+                        .scaleEffect(cinematics.player.camera.scale,
+                                     anchor: UnitPoint(x: CGFloat(cinematics.player.camera.focusX),
+                                                       y: CGFloat(cinematics.player.camera.focusY)))
+                    CinematicOverlayView(coordinator: cinematics)
                     bubble(for: tco, size: geo.size)
                     if let cursor = cursorPoint, tco.toolMode == .cursor {
                         Image(systemName: "cursorarrow")
@@ -182,6 +194,7 @@ struct ContentView: View {
                 .gesture(stageGesture(size: geo.size))
                 .onReceive(tickTimer) { _ in
                     tco.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width, stageHeight: geo.size.height)
+                    cinematics.tick(deltaTime: 1.0 / 60.0, stageWidth: geo.size.width, stageHeight: geo.size.height)
                 }
             }
         }
@@ -315,7 +328,8 @@ struct ContentView: View {
             consoleFinishedWait += 0.028
             if consoleFinishedWait > 0.55 {
                 showConsole = false
-                tco.bringToLife()
+                // El nacimiento pasa por las cinematicas (escena «Nacimiento»)
+                cinematics.birthFlow()
             }
         }
     }
@@ -342,6 +356,8 @@ struct ContentView: View {
     private func stageGesture(size: CGSize) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
+                // Durante una cinematica el lienzo es de la escena
+                guard !cinematics.player.isPlaying else { return }
                 let world = worldPoint(value.location, size: size)
                 switch tco.toolMode {
                 case .pencil:
@@ -364,6 +380,7 @@ struct ContentView: View {
                         if dx * dx + dy * dy < 92 * 92 && tco.isAlive {
                             isDraggingHim = true
                             tco.beginDrag()
+                            cinematics.noteGrab()   // cuenta para el «Duelo con el dedo»
                         }
                     }
                     if isDraggingHim {
@@ -374,10 +391,12 @@ struct ContentView: View {
                 }
             }
             .onEnded { value in
+                guard !cinematics.player.isPlaying else { isDraggingHim = false; dragChecked = false; return }
                 let world = worldPoint(value.location, size: size)
                 switch tco.toolMode {
                 case .pencil:
                     tco.appendUserStrokePoint(world); tco.finishUserStroke()
+                    cinematics.noteKindStrokeFinished()   // trazo amable terminado
                     strokeStarted = false
                 case .eraser:
                     tco.eraseAt(world)
@@ -387,6 +406,8 @@ struct ContentView: View {
                         let vx = (value.predictedEndTranslation.width - value.translation.width) * 3.2
                         let vy = (value.predictedEndTranslation.height - value.translation.height) * 3.2
                         tco.endDrag(velocity: CGSize(width: vx, height: vy))
+                        // Soltarlo de un lanzamiento cuenta como trato brusco
+                        if hypot(vx, vy) > 900 { cinematics.noteRoughTouch() }
                     } else if abs(value.translation.width) < 10 && abs(value.translation.height) < 10 {
                         let tapSpeed = hypot(value.predictedEndTranslation.width - value.translation.width,
                                              value.predictedEndTranslation.height - value.translation.height) * 3.2
@@ -424,7 +445,7 @@ struct ContentView: View {
                 suggestionButton("⚔️ Espada") { tco.suggest(.sword) }
                 suggestionButton("🪑 Sentarse") { tco.suggest(.sitting) }
                 suggestionButton("💤 Dormir") { tco.suggestSleep() }
-                suggestionButton("⚡ Chosen One") { tco.suggestChosenOne() }
+                suggestionButton("⚡ Second Coming") { cinematics.noteAwakenButton() }
                 floatingButton
             }
             .padding(.horizontal, 10).padding(.vertical, 8)
@@ -443,12 +464,16 @@ struct ContentView: View {
         .disabled(!tco.isAlive)
     }
 
-    // MARK: Boton del modo flotante (v5): saca a TCO en una ventana PiP
+    // MARK: Boton del modo flotante (v5): saca a TSC en una ventana PiP
     // que flota sobre las demas apps. No depende de que el personaje de
     // la escena principal este "vivo": la ventanita tiene su propio motor.
 
     private var floatingButton: some View {
-        Button(action: { pip.toggle() }) {
+        Button(action: {
+            pip.toggle()
+            // Activar el modo libre (PiP) puede desbloquear su escena
+            if pip.isEnabled { cinematics.noteFreeModeUnlocked() }
+        }) {
             Text(pip.isFloating ? "🪟 ¡Está flotando!" : "🪟 Modo flotante")
                 .font(.callout.bold()).foregroundColor(.white)
                 .padding(.horizontal, 15).padding(.vertical, 12)

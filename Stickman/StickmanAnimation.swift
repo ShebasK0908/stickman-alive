@@ -1502,6 +1502,61 @@ enum AnimationLibrary {
         case .sittingFacingFinger: return sit
         case .gettingUp: return getUp
         case .escapeBurst: return escapeBurst
+        // Integracion v7/v8/v9: casos nuevos -> clips de las tandas
+        case .jetFlight: return AnimationLibraryV7.flameJet
+        case .uppercut: return AnimationLibraryV7.uppercut
+        case .flyingKick: return AnimationLibraryV7.flyingKick
+        case .tackling: return AnimationLibraryV7.tackle
+        case .snatching: return AnimationLibraryV7.snatchTool
+        case .typing: return AnimationLibraryV7.typeFrenzy
+        case .pushingHeavy: return AnimationLibraryV7.pushHeavy
+        case .peeking: return AnimationLibraryV7.peekCorner
+        case .crawling: return AnimationLibraryV7.crawl
+        case .swingingRope: return AnimationLibraryV7.swingRope
+        case .meditating: return AnimationLibraryV7.meditate
+        case .exercising: return AnimationLibraryV7.pushUps
+        case .jumpRoping: return AnimationLibraryV7.jumpRope
+        case .eating: return AnimationLibraryV7.eatSnack
+        case .drinking: return AnimationLibraryV7.drinkSip
+        case .sneezing: return AnimationLibraryV7.sneeze
+        case .hiccuping: return AnimationLibraryV7.hiccup
+        case .walkingBack: return AnimationLibraryV8.walkBack
+        case .sneaking: return AnimationLibraryV8.sneak
+        case .carryingLoaded: return AnimationLibraryV8.walkLoaded
+        case .throwingLoaded: return AnimationLibraryV9.throwLoaded
+        case .fallingWithObject: return AnimationLibraryV9.fallWithObject
+        case .handstanding: return AnimationLibraryV8.handstand
+        case .tightroping: return AnimationLibraryV8.tightrope
+        case .oneHandHanging: return AnimationLibraryV8.oneHandHang
+        case .backKicking: return AnimationLibraryV8.backKick
+        case .kneeStriking: return AnimationLibraryV8.kneeStrike
+        case .elbowStriking: return AnimationLibraryV8.elbowStrike
+        case .headbutting: return AnimationLibraryV8.headbutt
+        case .leaningBack: return AnimationLibraryV8.leanBack
+        case .chargingFireball: return AnimationLibraryV8.fireCharge
+        case .diving: return AnimationLibraryV8.dive
+        case .clapping: return AnimationLibraryV8.clap
+        case .bowing: return AnimationLibraryV8.bow
+        case .begging: return AnimationLibraryV8.beg
+        case .impatient: return AnimationLibraryV8.impatient
+        case .shivering: return AnimationLibraryV8.shiver
+        case .beckoning: return AnimationLibraryV8.beckon
+        case .highFiving: return AnimationLibraryV8.highFive
+        case .groundPounding: return AnimationLibraryV9.groundPound
+        case .feinting: return AnimationLibraryV9.feint
+        case .sidestepping: return AnimationLibraryV9.sidestep
+        case .parrying: return AnimationLibraryV9.palmParry
+        case .fingerShielding: return AnimationLibraryV9.fingerShield
+        case .stretching: return AnimationLibraryV9.stretchSide
+        case .noddingOff: return AnimationLibraryV9.nodOff
+        case .sleepRolling: return AnimationLibraryV9.sleepRoll
+        case .inspecting: return AnimationLibraryV9.crouchInspect
+        case .releasingBird: return AnimationLibraryV9.releaseBird
+        case .pettingCreature: return AnimationLibraryV9.petCreature
+        case .feedingCreature: return AnimationLibraryV9.feedCreature
+        case .ridingHorse: return AnimationLibraryV9.rideHorse
+        case .conducting: return AnimationLibraryV9.conduct
+        case .wallJumping: return AnimationLibraryV9.wallJump
         }
     }
 

@@ -6,7 +6,7 @@ import CoreVideo
 
 // MARK: - Modo flotante (Picture-in-Picture) — v5
 //
-// The Chosen One en una ventanita que flota sobre las demas apps.
+// The Second Coming en una ventanita que flota sobre las demas apps.
 // Implementacion con AVPictureInPictureController +
 // AVSampleBufferDisplayLayer: renderizamos NUESTRA escena (el mismo
 // sistema de poses por keyframes de StickmanAnimation.swift) a un
@@ -147,7 +147,7 @@ enum FloatingRenderer {
 
         let pose = engine.currentPose()
         let j = joints(pose: pose, cx: engine.x, ground: ground, facing: engine.facing)
-        let ink = CGColor(red: 0.07, green: 0.07, blue: 0.07, alpha: 1)
+        let ink = CGColor(red: 0.945, green: 0.506, blue: 0.047, alpha: 1)
 
         // Aura amarilla cuando suelta un poder
         if engine.mode == .power {
@@ -190,17 +190,18 @@ enum FloatingRenderer {
         body.move(to: j.neck); body.addLine(to: j.elbowL); body.addLine(to: j.handL)
         body.move(to: j.neck); body.addLine(to: j.elbowR); body.addLine(to: j.handR)
         ctx.setStrokeColor(ink)
-        ctx.setLineWidth(7)
+        ctx.setLineWidth(10)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         ctx.addPath(body)
         ctx.strokePath()
 
-        // Cabeza LLENA, con el squash del clip (nuestro dibujo de siempre)
+        // Cabeza de ANILLO hueco, con el squash del clip
         let headH = 40 * pose.squash
         let headW = 40 * (1 + (1 - pose.squash) * 0.55)
-        ctx.setFillColor(ink)
-        ctx.fillEllipse(in: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH))
+        ctx.setStrokeColor(ink)
+        ctx.setLineWidth(9.5)
+        ctx.strokeEllipse(in: CGRect(x: j.head.x - headW / 2, y: j.head.y - headH / 2, width: headW, height: headH))
 
         // "Z" de sueno: tres trazos que suben y se desvanecen (se dibujan
         // como polilineas, sin depender de texto/CoreText en este contexto)
