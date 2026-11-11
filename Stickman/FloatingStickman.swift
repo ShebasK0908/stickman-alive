@@ -308,7 +308,7 @@ final class FloatingPiPManager: NSObject, ObservableObject {
             firstPTS = nil
             frameIndex = 0
         }
-        guard displayLayer.readyForMoreMediaData else { return }
+        guard displayLayer.isReadyForMoreMediaData else { return }
         engine.update(dt: 1.0 / 30.0)
         guard let pixelBuffer = FloatingRenderer.makePixelBuffer() else { return }
         FloatingRenderer.draw(engine: engine, into: pixelBuffer)
