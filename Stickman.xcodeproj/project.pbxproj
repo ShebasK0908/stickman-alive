@@ -13,6 +13,7 @@
 		000000000000000000000035 /* StickmanBrain.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000022 /* StickmanBrain.swift */; };
 		000000000000000000000036 /* StickmanPowers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000023 /* StickmanPowers.swift */; };
 		000000000000000000000037 /* StickmanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000024 /* StickmanView.swift */; };
+		000000000000000000000038 /* StickmanAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000025 /* StickmanAnimation.swift */; };
 		00000000000000000000003C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 000000000000000000000028 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +24,7 @@
 		000000000000000000000022 /* StickmanBrain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanBrain.swift; sourceTree = "<group>"; };
 		000000000000000000000023 /* StickmanPowers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanPowers.swift; sourceTree = "<group>"; };
 		000000000000000000000024 /* StickmanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanView.swift; sourceTree = "<group>"; };
+		000000000000000000000025 /* StickmanAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StickmanAnimation.swift; sourceTree = "<group>"; };
 		000000000000000000000014 /* Stickman.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Stickman.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		000000000000000000000028 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		000000000000000000000029 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -64,6 +66,7 @@
 				000000000000000000000022 /* StickmanBrain.swift */,
 				000000000000000000000023 /* StickmanPowers.swift */,
 				000000000000000000000024 /* StickmanView.swift */,
+				000000000000000000000025 /* StickmanAnimation.swift */,
 				000000000000000000000028 /* Assets.xcassets */,
 				000000000000000000000029 /* Info.plist */,
 			);
@@ -145,6 +148,7 @@
 				000000000000000000000035 /* StickmanBrain.swift in Sources */,
 				000000000000000000000036 /* StickmanPowers.swift in Sources */,
 				000000000000000000000037 /* StickmanView.swift in Sources */,
+				000000000000000000000038 /* StickmanAnimation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
