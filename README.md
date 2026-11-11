@@ -8,6 +8,86 @@ externos: todo se dibuja y se anima por código.
 
 Bundle ID: `dev.stickman.alive` · Mínimo: iOS 16.0 · Sin firmar (para SideStore).
 
+## v2 — qué se corrigió tras probar la v1 en el iPhone
+
+Feedback real del usuario: *«No me deja interactuar con los botones o
+opciones a la izquierda para dibujar o borrar cosas, y sus animaciones no
+se parecen en nada a las del vídeo»*. Causas encontradas en el código v1:
+
+1. **La toolbar izquierda era decorativa:** un `VStack` de imágenes SF
+   Symbols sin ningún `Button`, y el lienzo tenía un
+   `DragGesture(minimumDistance: 0)` que lo interpretaba todo como
+   cursor/arrastre. No existía modo lápiz/goma ni trazos del usuario.
+   **Arreglo:** toolbar con **botones SwiftUI reales** (≥52 pt, modo
+   activo resaltado en naranja) en una columna *hermana* del lienzo,
+   fuera de su gesto: **Cursor, Lápiz, Goma, Borrar todo y Deshacer**,
+   más una fila de estado que dice el modo actual («Modo: Lápiz — dibuja
+   con el dedo»). Un único gesto en el lienzo, ramificado por modo:
+   lápiz = trazos libres **persistentes y físicos** (sus tramos casi
+   horizontales son plataformas: puede aterrizar, caminar y subirse a
+   lo que dibujes), goma = arrastrar sobre trazos u objetos para
+   borrarlos, cursor = agarrar/lanzar/tocar al stickman.
+2. **Las animaciones eran poses sueltas** calculadas con `sin(phase*k)`.
+   **Arreglo:** sistema nuevo por **keyframes** con principios clásicos
+   (ver «Animación» y «Locomoción» más abajo).
+
+### Locomoción (reescrita desde cero)
+
+Ya no hay `x += velocidad fija`: hay velocidad con **aceleración y
+frenada con peso**, fase de zancada **ligada a la velocidad real**
+(a más velocidad, ciclo más rápido y zancada más larga), **blend
+caminar↔correr** por velocidad, **derrape con polvo** al frenar en seco
+o cambiar de sentido, **giro con paso cruzado**, salto con
+**anticipación** (se agacha antes de despegar), vuelo con stretch,
+caída con piernas abiertas, y aterrizajes según impacto: squash suave,
+**rodar** si cae fuerte y **mareo** si cae muy fuerte. También se
+desliza frenando cuando choca contra un borde en el aire.
+
+### Pequeña IA de interacción / defensa
+
+- **Percibe tu dedo:** distancia, velocidad y velocidad de acercamiento
+  (`FingerTracker`), y distingue un toque amistoso (lento, único) de
+  persecución o agarres repetidos (`InteractionBrain`).
+- **Decide en tiempo real:** acercarse curioso, saludar, **huir
+  corriendo**, esquivar **agachándose / rodando / saltando por encima
+  del dedo**, **bloquear** con los brazos, **agarrar tu dedo** y
+  forcejear (el cursor se tambalea), **contraatacar** con el combo de
+  artes marciales, **esconderse** tras un objeto dibujado (que pasa a
+  dibujarse delante de él), usar un **bloque o la espada como
+  escudo/arma**, y si el acoso sigue, un **mini Modo Chosen One**
+  (superpuñetazo con onda de choque).
+- **Aprende en la sesión:** el contador de **acoso** (visible en el
+  panel 🧠) sube con agarres, persecuciones y toques bruscos, y decae
+  con calma; dibujarle algo o jugar suave lo baja y vuelve a ser
+  curioso/amistoso. Si le sujetas el dedo más de ~2,2 s, **se sacude y
+  escapa de la caja de selección solo**.
+- **Se ve:** bocadillos al decidir («¡eh!», «no me atrapas», «vale,
+  jugamos» → saludo), guardia visible al sentirse amenazado y el panel
+  muestra su última decisión de IA y el nivel de acoso.
+
+### Animación por keyframes (`StickmanAnimation.swift`)
+
+Cada animación es un **clip de datos** (duración, keyframes de ángulos/
+posición raíz sobre el esqueleto articulado, easing por tramo) que la
+vista muestrea; la locomoción y el salto se eligen por fases físicas.
+Catálogo: despertar (estirarse, bostezar, frotarse, mirar confundido),
+idle vivo (respiración, balanceo, rascarse, mirar), caminar contralateral
+con boteo, correr inclinado con bombeo, derrape, giro cruzado, salto por
+fases (anticipación → stretch → caída → squash), voltereta/rodar,
+aterrizaje, mareo, pelea completa (guardia, puñetazos 1-2, patada,
+patada giratoria, bloqueo), esquivas, agarrar el dedo, ser agarrado
+(pataleo), escapar de la caja, ser aplastado, ser lanzado (brazos
+aspas), deslizarse por la pared, señalar no — encogerse de hombros,
+pulgar arriba, negar, reír, pisotón enfadado, asustarse con temblor,
+sentarse aburrido con la cabeza en la mano, dormir tumbado, celebrar,
+bailar (pasos laterales, giro y moonwalk), dibujar con el lápiz grande
+a dos manos, frotar la goma, esgrima (estocada y molinete), martillo,
+trepar, y Chosen One: vuelo tipo superman, cargar energía agachado con
+aura, aliento de fuego inclinado, láser con retroceso, superpuñetazo
+con paso enorme, superfuerza temblorosa. Las criaturas de AvA4
+(pajarito que aletea y vuela en círculos, perrito que trota y le sigue)
+se animan con sus propios ciclos (`CreatureAnimation`).
+
 ## No es una marioneta: tiene LIBERTAD
 
 Los botones son **sugerencias**, no órdenes. Según su humor, a veces obedece,
