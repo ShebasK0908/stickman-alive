@@ -15,6 +15,6 @@ xcodebuild \
   CODE_SIGN_IDENTITY="" \
   build
 
-./package-ipa.sh \
+bash ./package-ipa.sh \
   "build/DerivedData/Build/Products/Release-iphoneos/Stickman.app" \
   "Stickman.ipa"
