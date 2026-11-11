@@ -9,6 +9,39 @@ sin dependencias ni assets externos: todo se dibuja y se anima por código.
 
 Bundle ID: `dev.stickman.alive` · Mínimo: iOS 16.0 · Sin firmar (para SideStore).
 
+## v5 — Widget de pantalla de inicio + modo flotante (PiP)
+
+Dos novedades pedidas por el usuario («quiero verlo en todo momento, y
+que interactúe con mis aplicaciones»), con la verdad técnica por delante:
+iOS **no** deja que una app dibuje sobre las demás ni toque dentro de
+otras apps. Lo más cerca que permite el sistema es esto:
+
+1. **Widget de pantalla de inicio** (target nuevo `StickmanWidget`,
+   bundle id `dev.stickman.alive.widget`, WidgetKit, iOS 17+):
+   The Chosen One dibujado por código (Canvas, mismas proporciones y
+   cabeza llena) en un widget mediano (y pequeño). Las poses **rotan**
+   por la timeline: de pie, caminando, sentado, durmiendo y pose de
+   poder. Tres **botones** con App Intents — 👋 Saludar, 🏃 Correr,
+   🔥 Fuego — eligen la pose que se muestra primero. Al tocar el cuerpo
+   del widget se abre la app. Sin App Groups a propósito (para no
+   romper SideStore): el estado vive en la propia extensión, así que
+   **el widget no comparte estado con la app** y sus poses no se mueven
+   en tiempo real: cambian cuando iOS refresca la timeline.
+2. **Modo flotante (PiP)** dentro de la app (`FloatingStickman.swift`):
+   botón «🪟 Modo flotante» en la barra de sugerencias. Abre una
+   ventanita Picture-in-Picture (`AVPictureInPictureController` +
+   `AVSampleBufferDisplayLayer`) que **sí flota sobre las demás apps**
+   mientras navegas por el teléfono. Dentro, TCO vive con un motor mini
+   propio a ~30 fps (640×360): camina de un lado a otro, se para, se
+   sienta en el borde inferior, duerme (con sus Z) y de vez en cuando
+   suelta fuego o láser, reutilizando los clips reales de
+   `StickmanAnimation.swift` renderizados a un `CVPixelBuffer`.
+   Está configurado el arranque automático al salir de la app
+   (`canStartPictureInPictureAutomaticallyFromInline` + sesión de
+   audio playback + background mode `audio`), pero el camino
+   garantizado es el botón; la ventanita se cierra desde los controles
+   del propio PiP.
+
 ## v4 — SOLO The Chosen One y pase de animación «como en los vídeos»
 
 Dos cambios, pedidos por el usuario tras probar la v3 («está mal»):
