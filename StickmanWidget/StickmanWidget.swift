@@ -184,14 +184,16 @@ private struct StickmanCanvas: View {
             limb(&body, neck, elbowR, handR)
             ctx.stroke(body, with: .color(ink), style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
 
-            // Cabeza de anillo hueco GRANDE (52 uds. de figura, espejo
-            // de ViewTuning.headDiameter), squash amortiguado como en
+            // Cabeza de anillo hueco GRANDE (58 uds. de figura, espejo
+            // de ViewTuning.headDiameter; R10: ~35 % estricto del
+            // alto, como en los modelos del usuario), squash
+            // amortiguado como en
             // la app. Trazo del anillo 8,5 uds. (espejo de headStroke);
             // el del cuerpo queda en 10 uds. PORQUE el Canvas ya
             // aplica el 0,8: la proporcion trazo/alto sale la misma.
             let sq = min(1.07, max(0.93, pose.squash))
-            let headH = 52 * sq
-            let headW = 52 * (1 + (1 - sq) * 0.55)
+            let headH = 58 * sq
+            let headW = 58 * (1 + (1 - sq) * 0.55)
             ctx.stroke(Path(ellipseIn: CGRect(x: head.x - headW / 2, y: head.y - headH / 2, width: headW, height: headH)),
                        with: .color(ink), lineWidth: 8.5)
         }
