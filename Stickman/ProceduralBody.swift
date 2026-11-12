@@ -33,7 +33,16 @@ import Foundation
 //    a X, saltar, huir, sentarse...); esto solo cambia COMO se mueve.
 //  * Las superficies y los dibujos solidos de la ronda 2/fusion no se
 //    tocan: el motor consume las mismas (contexto de superficie del
-//    controlador; en pared/techo manda el sistema anterior).
+//    controlador; en techo manda el sistema anterior).
+//  * R4 (2026-11-12): el TREPAR en pared pasa a GENERADO
+//    (ProceduralPoseGen.climb: alcance/tiron por fase + pendulo lento
+//    del cuerpo colgando de las manos, perfil climb de brazos
+//    sueltos) y el COLGADO (hangingWall, de pared o de un borde)
+//    gana una capa de pendulo procedural sobre su clip. El VUELO
+//    PROPULSADO (jetFlight) se queda en clip + muelles estandar A
+//    PROPOSITO: su pose es horizontal a pulso (cuerpo-tabla con los
+//    chorros en las manos) y el generador de aire, que compone en
+//    vertical, la romperia; queda documentado en INFORME-RONDA4.
 
 // MARK: Constantes UNICAS del motor (todo numero vive aqui)
 
@@ -52,6 +61,11 @@ enum ProceduralTuning {
     static let profileSoft = SpringProfile(massK: 90, massZ: 0.60, torsoK: 120, torsoZ: 0.70, armK: 70, armZ: 0.50, legK: 200, legZ: 0.85, squashK: 120, squashZ: 0.45)
     static let profileHeavy = SpringProfile(massK: 95, massZ: 0.40, torsoK: 130, torsoZ: 0.60, armK: 80, armZ: 0.45, legK: 240, legZ: 0.80, squashK: 105, squashZ: 0.33)
     static let profileLoose = SpringProfile(massK: 120, massZ: 0.55, torsoK: 110, torsoZ: 0.55, armK: 55, armZ: 0.38, legK: 120, legZ: 0.50, squashK: 120, squashZ: 0.45)
+    /// R4: trepar — masa firme (no rebota contra la pared), brazos
+    /// SUELTOS (llegan tarde a cada agarre: follow-through, que es
+    /// donde se lee el peso al subir) y piernas firmes (los pies
+    /// buscan apoyo sin bailar).
+    static let profileClimb = SpringProfile(massK: 300, massZ: 0.65, torsoK: 150, torsoZ: 0.70, armK: 60, armZ: 0.42, legK: 300, legZ: 0.85, squashK: 130, squashZ: 0.45)
 }
 
 struct SpringProfile {
@@ -288,6 +302,85 @@ enum ProceduralPoseGen {
         if vy < -260 { p.squash = 0.97 + CGFloat(min(1, Double(-vy - 260) / 700)) * 0.05 }
         return p
     }
+
+    // MARK: Trepar GENERADO (R4): alcance/tiron por fase + pendulo
+
+    /// La trepada deja de muestrear el clip `climb`: cuatro llaves
+    /// con la MISMA geometria del clip (mano que agarra arriba a
+    /// -29/-30, la otra sujeta a -13/-19, pies alternos 37/47,
+    /// squash 0,97 en los tirones) interpoladas en ciclo por la fase
+    /// de zancada, MAS lo que el clip no podia dar: un pendulo lento
+    /// del cuerpo colgando de las manos (periodo 2,4 s, el del
+    /// hangWall) con los pies DESFASADOS (llegan tarde: peso muerto
+    /// que balancea) y la cabeza siguiendo un pelo despues. El
+    /// solucionador (perfil climb) pone el resto del peso.
+    static func climb(phase rawPhase: Double, time t: Double) -> SkeletonPose {
+        typealias CK = (u: Double, handL: CGPoint, elbowL: CGPoint, handR: CGPoint, elbowR: CGPoint,
+                        footL: CGPoint, kneeL: CGPoint, footR: CGPoint, kneeR: CGPoint, squash: CGFloat, neckY: CGFloat)
+        let keys: [CK] = [
+            (0.0,   CGPoint(x: -14, y: -13), CGPoint(x: -15, y: -6),  CGPoint(x: 15, y: -29), CGPoint(x: 17, y: -14), CGPoint(x: -11, y: 47), CGPoint(x: -13, y: 24), CGPoint(x: 11, y: 37), CGPoint(x: 13, y: 17), 1.0, -42),
+            (0.243, CGPoint(x: -14, y: -14), CGPoint(x: -16, y: -6),  CGPoint(x: 14, y: -19), CGPoint(x: 21, y: -4),  CGPoint(x: -10, y: 48), CGPoint(x: -12, y: 28), CGPoint(x: 12, y: 47), CGPoint(x: 13, y: 24), 0.97, -41),
+            (0.5,   CGPoint(x: -16, y: -30), CGPoint(x: -17, y: -15), CGPoint(x: 14, y: -19), CGPoint(x: 20, y: -5),  CGPoint(x: -9, y: 37),  CGPoint(x: -12, y: 17), CGPoint(x: 11, y: 47), CGPoint(x: 13, y: 24), 1.0, -42),
+            (0.743, CGPoint(x: -15, y: -20), CGPoint(x: -21, y: -4),  CGPoint(x: 15, y: -13), CGPoint(x: 16, y: -6),  CGPoint(x: -11, y: 47), CGPoint(x: -13, y: 24), CGPoint(x: 9, y: 37),  CGPoint(x: 12, y: 17), 0.97, -41),
+        ]
+        let u = frac(rawPhase)
+        var i = keys.count - 1
+        for k in 0..<keys.count where u >= keys[k].u { i = k }
+        let a = keys[i], b = keys[(i + 1) % keys.count]
+        let span = i + 1 < keys.count ? (b.u - a.u) : (1.0 - a.u + b.u)
+        var w: CGFloat = 0
+        if span > 0 {
+            w = u >= a.u ? CGFloat((u - a.u) / span) : CGFloat((u + 1.0 - a.u) / span)
+        }
+        let e = w * w * (3 - 2 * w)
+        func lp(_ p: CGPoint, _ q: CGPoint) -> CGPoint { CGPoint(x: p.x + (q.x - p.x) * e, y: p.y + (q.y - p.y) * e) }
+        var p = SkeletonPose.standing
+        p.handL = lp(a.handL, b.handL); p.elbowL = lp(a.elbowL, b.elbowL)
+        p.handR = lp(a.handR, b.handR); p.elbowR = lp(a.elbowR, b.elbowR)
+        p.footL = lp(a.footL, b.footL); p.kneeL = lp(a.kneeL, b.kneeL)
+        p.footR = lp(a.footR, b.footR); p.kneeR = lp(a.kneeR, b.kneeR)
+        p.squash = a.squash + (b.squash - a.squash) * e
+        p.neckOff = CGPoint(x: 0, y: a.neckY + (b.neckY - a.neckY) * e)
+        // Pendulo lento colgando de las manos + pies que llegan tarde
+        let sway = CGFloat(sin(2 * Double.pi * t / 2.4))
+        let lag = CGFloat(sin(2 * Double.pi * t / 2.4 - 0.8))
+        p.hipDX = sway * 2.0
+        p.footL.x += lag * 3.0
+        p.footR.x += lag * 3.0
+        p.headOff.x += sway * 0.8
+        return p
+    }
+
+    // MARK: Colgado: capa de pendulo procedural sobre el clip (R4)
+
+    /// El clip hangWall ya trae un pendulo horneado (±3 uds, fijo);
+    /// esta capa lo hace continuo y fisico: balanceo de 2,4 s con
+    /// las piernas desfasadas (llegan tarde, como un peso muerto) y
+    /// la cabeza siguiendo un pelo despues.
+    /// Y CLAVA LA MANO AGARRADA: en el clip, solo el primer keyframe
+    /// lleva la mano derecha arriba (cada keyframe se construye
+    /// desde la pose de pie, asi que en el resto del ciclo la mano
+    /// «agarrada» cae al costado y el colgado se queda sin ancla
+    /// el 75 % del tiempo). La capa mezcla mano y codo derechos
+    /// hacia el ancla del primer keyframe (6,-52)/(10,-26) al 85 %:
+    /// la mano se queda EN el borde todo el ciclo y el cuerpo
+    /// balancea debajo de ella, que es como se lee un colgado.
+    static func hangOverlay(_ base: SkeletonPose, time t: Double) -> SkeletonPose {
+        var p = base
+        p.handR = CGPoint(x: p.handR.x + (6 - p.handR.x) * 0.85,
+                          y: p.handR.y + (-52 - p.handR.y) * 0.85)
+        p.elbowR = CGPoint(x: p.elbowR.x + (10 - p.elbowR.x) * 0.85,
+                           y: p.elbowR.y + (-26 - p.elbowR.y) * 0.85)
+        let sway = CGFloat(sin(2 * Double.pi * t / 2.4))
+        let lag = CGFloat(sin(2 * Double.pi * t / 2.4 - 0.9))
+        p.hipDX += sway * 2.6
+        p.footL.x += lag * 4.5
+        p.footR.x += lag * 4.5
+        p.kneeL.x += lag * 2.0
+        p.kneeR.x += lag * 2.0
+        p.headOff.x += sway * 1.0
+        return p
+    }
 }
 
 // MARK: - Solucionador de muelles (estado entre frames)
@@ -381,6 +474,18 @@ final class ProceduralBody {
 
     private func targetAndProfile(_ ctx: ProceduralContext, clipPose: () -> SkeletonPose) -> (SkeletonPose, SpringProfile) {
         let a = ctx.action
+        // R4: TREPAR procedural en pared (antes: clip + muelles
+        // estandar). El generador pone la forma (alcance/tiron +
+        // pendulo) y el perfil climb pone el peso.
+        if a == .wallClimbing && !ctx.surfaceIsFloor {
+            return (ProceduralPoseGen.climb(phase: ctx.gaitPhase01, time: ctx.time), ProceduralTuning.profileClimb)
+        }
+        // R4: COLGADO (de una pared o de un borde, mismo sistema de
+        // agarre): el clip hangWall + la capa de pendulo procedural,
+        // con el perfil mas suelto para que el balanceo respire.
+        if a == .hangingWall {
+            return (ProceduralPoseGen.hangOverlay(clipPose(), time: ctx.animTime), ProceduralTuning.profileLoose)
+        }
         if ctx.surfaceIsFloor && !ctx.isJumpWindingUp && !ctx.isSkidding && !ctx.isTurning && !ctx.isWallSliding {
             // Aire: pose GENERADA por velocidad (salto/caida/lanzado)
             if ctx.isAirborne && (a == .jumping || a == .thrown || a == .dropping) {
