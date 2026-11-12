@@ -149,6 +149,21 @@ private struct StickmanCanvas: View {
             floor.addLine(to: CGPoint(x: size.width / scale / 2 - 4, y: 0))
             ctx.stroke(floor, with: .color(.gray.opacity(0.5)), lineWidth: 2.5 / scale * 1.6)
 
+            // ESCENA V11 (guiño barato): bajo el suelo, la mini línea
+            // de tiempo de su mundo — celdas de fotogramas y el
+            // cabezal rojo — y el borde de la hoja a su espalda.
+            let halfW2 = size.width / scale / 2 - 4
+            var cellX = -halfW2
+            while cellX + 9 < halfW2 {
+                ctx.stroke(Path(CGRect(x: cellX, y: 2.5, width: 8, height: 6)), with: .color(.gray.opacity(0.4)), lineWidth: 1.2 / scale * 1.6)
+                cellX += 9.5
+            }
+            var phLine = Path()
+            phLine.move(to: CGPoint(x: halfW2 * 0.4, y: 1)); phLine.addLine(to: CGPoint(x: halfW2 * 0.4, y: 10))
+            ctx.stroke(phLine, with: .color(.red.opacity(0.8)), lineWidth: 1.6 / scale * 1.6)
+            ctx.stroke(Path(CGRect(x: -halfW2, y: -178, width: halfW2 * 2, height: 178)),
+                       with: .color(.gray.opacity(0.28)), lineWidth: 1.2 / scale * 1.6)
+
             // Aura del modo poder / fuego: pegada al cuerpo (cubre la
             // figura con la cabeza grande: alto total ~156 uds.)
             if kind == .power || kind == .fire {
