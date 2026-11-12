@@ -114,7 +114,9 @@ struct StickmanCanvasView: View {
     private func feetY(size: CGSize) -> CGFloat {
         let groundY = size.height - 10
         switch controller.surface {
-        case .ceiling: return 6
+        // ESCENA V11: en el techo sus pies se anclan al borde inferior
+        // de la barra de menús (antes una guía punteada a 6 pt).
+        case .ceiling: return SceneLayout.menuBarHeight
         case .wallLeft, .wallRight: return groundY - controller.heightAboveGround
         default: return groundY - controller.platformHeight - controller.heightAboveGround
         }
@@ -133,7 +135,7 @@ struct StickmanCanvasView: View {
         let cx = screenX(size: size)
         let effectiveGround = feetY(size: size)
 
-        drawPlatforms(context: &context, size: size, groundY: groundY)
+        drawWorld(context: &context, size: size)
         if let frozenX = c.frozenPatchX { drawFrozenPatch(context: &context, x: frozenX, groundY: groundY) }
         drawUserStrokes(context: &context, groundY: groundY)
         for object in c.objects where object.id != c.hidingObjectID {
@@ -170,13 +172,9 @@ struct StickmanCanvasView: View {
         // prop de historia sobrevive SOLO en la cinematica «Escape»,
         // dibujada por CinematicEngine (prop .selectionBox), no aqui.
         drawParticles(context: &context, groundY: groundY)
-        // Guias visuales de superficies: techo y paredes tenues
-        var guides = Path()
-        guides.move(to: CGPoint(x: 0, y: 6)); guides.addLine(to: CGPoint(x: size.width, y: 6))
-        context.stroke(guides, with: .color(.gray.opacity(0.30)), style: StrokeStyle(lineWidth: 2, dash: [3, 5]))
-        // Suelo
-        var floor = Path(); floor.move(to: CGPoint(x: 0, y: groundY)); floor.addLine(to: CGPoint(x: size.width, y: groundY))
-        context.stroke(floor, with: .color(.gray.opacity(0.5)), lineWidth: 2)
+        // (Las guías punteadas de techo/suelo y las plataformas falsas
+        // de la escena vieja desaparecen en la v11: el mundo-programa
+        // de drawWorld ES la superficie, sin guías separadas.)
     }
 
     // MARK: Trazos del usuario (lapiz): persistentes y fisicos
@@ -198,16 +196,248 @@ struct StickmanCanvasView: View {
         ctx.stroke(p, with: .color(.black), style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
     }
 
-    private func drawPlatforms(context: inout GraphicsContext, size: CGSize, groundY: CGFloat) {
-        context.opacity = 0.35
-        for (h, w, fromLeft) in [(CGFloat(46), CGFloat(120), true), (CGFloat(104), CGFloat(140), false)] {
-            var p = Path()
-            let y = groundY - h
-            if fromLeft { p.move(to: CGPoint(x: 0, y: y)); p.addLine(to: CGPoint(x: w, y: y)) }
-            else { p.move(to: CGPoint(x: size.width - w, y: y)); p.addLine(to: CGPoint(x: size.width, y: y)) }
-            context.stroke(p, with: .color(.gray), style: StrokeStyle(lineWidth: 3, dash: [6, 4]))
+    // MARK: ESCENA V11 — el mundo ES el programa del Animador
+    //
+    // Diagnóstico del usuario (2026-11-12): lo que no se parecía era
+    // el mundo — una línea de suelo y dos plataformas punteadas no son
+    // el programa de los vídeos. Ahora la escena se lee a primera
+    // vista como un programa de animación clásico (gris plano con
+    // acentos, sin sombras ni blur): barra de menús-cornisa arriba, la
+    // hoja-escenario en el centro, la barra de herramientas sobre la
+    // pared izquierda, la línea de tiempo abajo y los paneles a la
+    // derecha. Y no es atrezzo: TODA su geometría sale de SceneLayout
+    // (StickmanEngine.swift), la misma que el motor registra como
+    // superficies pisables en groundTotalHeight. Solo Paths (como el
+    // resto del Canvas): los textos van como bloques/ticks.
+
+    private func drawWorld(context: inout GraphicsContext, size: CGSize) {
+        let layout = SceneLayout(width: size.width, height: size.height, phase: controller.phase)
+        let floorY = layout.floorY
+        let W = size.width
+        let workspace = Color(red: 0.87, green: 0.87, blue: 0.89)   // gris del área de trabajo
+        let panelGray = Color(red: 0.33, green: 0.33, blue: 0.36)   // paneles (herramientas/paneles)
+        let panelDark = Color(red: 0.23, green: 0.23, blue: 0.26)   // barra de menús
+        let stripGray = Color(red: 0.78, green: 0.78, blue: 0.81)   // línea de tiempo / escalón
+        let cellGray = Color(red: 0.92, green: 0.92, blue: 0.94)    // celdas de fotograma
+        let lineGray = Color(red: 0.52, green: 0.52, blue: 0.56)    // bordes
+        let iconInk = Color(red: 0.88, green: 0.88, blue: 0.90)     // iconos sobre panel oscuro
+
+        // Área de trabajo y LA HOJA (el escenario donde nació)
+        context.fill(Path(CGRect(x: 0, y: 0, width: W, height: size.height)), with: .color(workspace))
+        let sheet = CGRect(x: layout.toolbarMaxX + 4, y: SceneLayout.menuBarHeight + 2,
+                           width: W - layout.toolbarMaxX - 7, height: floorY - SceneLayout.menuBarHeight - 2)
+        context.fill(Path(sheet), with: .color(.white))
+        context.stroke(Path(sheet), with: .color(lineGray), lineWidth: 1.5)
+        // Rejilla tenue del papel de animación, solo dentro de la hoja
+        var gridCtx = context
+        gridCtx.clip(to: Path(sheet))
+        var grid = Path()
+        var gx = sheet.minX + 28
+        while gx < sheet.maxX { grid.move(to: CGPoint(x: gx, y: sheet.minY)); grid.addLine(to: CGPoint(x: gx, y: sheet.maxY)); gx += 28 }
+        var gy = sheet.minY + 28
+        while gy < sheet.maxY { grid.move(to: CGPoint(x: sheet.minX, y: gy)); grid.addLine(to: CGPoint(x: sheet.maxX, y: gy)); gy += 28 }
+        gridCtx.stroke(grid, with: .color(.gray.opacity(0.07)), lineWidth: 1)
+
+        drawMenuBar(context: &context, width: W, panelDark: panelDark, iconInk: iconInk)
+        drawToolbarPanel(context: &context, layout: layout, floorY: floorY, panelGray: panelGray, iconInk: iconInk)
+        drawTimeline(context: &context, layout: layout, floorY: floorY, stripGray: stripGray, cellGray: cellGray, lineGray: lineGray)
+        drawSidePanels(context: &context, layout: layout, floorY: floorY, panelGray: panelGray, lineGray: lineGray)
+
+        // Línea de suelo (el borde inferior de la hoja, de lado a lado)
+        var floor = Path(); floor.move(to: CGPoint(x: 0, y: floorY)); floor.addLine(to: CGPoint(x: W, y: floorY))
+        context.stroke(floor, with: .color(lineGray), lineWidth: 2)
+    }
+
+    /// Barra de menús superior: su borde inferior es la cornisa-techo
+    /// de la que camina colgado. Menús como bloques de distinto ancho
+    /// (sin texto en el Canvas) y su muestra naranja a la derecha.
+    private func drawMenuBar(context: inout GraphicsContext, width W: CGFloat, panelDark: Color, iconInk: Color) {
+        let h = SceneLayout.menuBarHeight
+        context.fill(Path(CGRect(x: 0, y: 0, width: W, height: h)), with: .color(panelDark))
+        var x: CGFloat = 10
+        let menuWidths: [CGFloat] = [34, 30, 20, 38, 44, 28, 36]   // Archivo·Editar·Ver·Insertar·Modificar·Texto·Ventana
+        for w in menuWidths {
+            context.fill(Path(CGRect(x: x, y: h / 2 - 3, width: w, height: 6)), with: .color(iconInk.opacity(0.75)))
+            x += w + 14
+            if x > W - 90 { break }
         }
-        context.opacity = 1
+        // La muestra de SU color, junto al borde derecho de la barra
+        context.fill(Path(CGRect(x: W - 34, y: h / 2 - 5, width: 10, height: 10)), with: .color(bodyColor))
+        context.stroke(Path(CGRect(x: W - 34, y: h / 2 - 5, width: 10, height: 10)), with: .color(.white.opacity(0.8)), lineWidth: 1)
+        var cornisa = Path(); cornisa.move(to: CGPoint(x: 0, y: h)); cornisa.addLine(to: CGPoint(x: W, y: h))
+        context.stroke(cornisa, with: .color(Color(red: 0.15, green: 0.15, blue: 0.17)), lineWidth: 2)
+    }
+
+    /// Barra de herramientas sobre la pared izquierda: panel oscuro y
+    /// 7 iconos dibujados con formas. El borde superior de cada celda
+    /// es una repisa REAL (SceneLayout.toolLedgeHeights): trepando la
+    /// pared se puede caer/subir sobre ellos. El lápiz (índice 1) va
+    /// resaltado: es la herramienta que el cerebro ya sabe robar.
+    private func drawToolbarPanel(context: inout GraphicsContext, layout: SceneLayout, floorY: CGFloat, panelGray: Color, iconInk: Color) {
+        let panel = CGRect(x: 0, y: SceneLayout.menuBarHeight, width: layout.toolbarMaxX, height: floorY - SceneLayout.menuBarHeight)
+        context.fill(Path(panel), with: .color(panelGray))
+        for (i, topY) in layout.toolCellTopYs.enumerated() {
+            let cell = CGRect(x: 4, y: topY, width: layout.toolCellSize, height: layout.toolCellSize)
+            var cctx = context
+            cctx.fill(Path(cell), with: .color(i == 1 ? Color(red: 0.42, green: 0.42, blue: 0.46) : panelGray))
+            cctx.stroke(Path(cell), with: .color(Color(red: 0.45, green: 0.45, blue: 0.49)), lineWidth: 1)
+            // Borde superior de la repisa, marcado: es suelo pisabable
+            var lip = Path(); lip.move(to: CGPoint(x: cell.minX, y: cell.minY)); lip.addLine(to: CGPoint(x: cell.maxX, y: cell.minY))
+            cctx.stroke(lip, with: .color(iconInk.opacity(0.85)), lineWidth: 2)
+            drawToolGlyph(context: &cctx, index: i, cell: cell, ink: iconInk)
+        }
+    }
+
+    /// Iconos con Paths: 0 flecha/cursor, 1 lápiz, 2 pincel, 3 goma,
+    /// 4 cubo de pintura, 5 lazo, 6 texto (una T de dos trazos).
+    private func drawToolGlyph(context: inout GraphicsContext, index: Int, cell: CGRect, ink: Color) {
+        let cx = cell.midX, cy = cell.midY
+        var p = Path()
+        switch index {
+        case 0:  // flecha (cursor del animador)
+            p.move(to: CGPoint(x: cx - 5, y: cy - 9)); p.addLine(to: CGPoint(x: cx - 5, y: cy + 8))
+            p.addLine(to: CGPoint(x: cx - 1, y: cy + 4)); p.addLine(to: CGPoint(x: cx + 2, y: cy + 10))
+            p.addLine(to: CGPoint(x: cx + 5, y: cy + 8)); p.addLine(to: CGPoint(x: cx + 2, y: cy + 3))
+            p.addLine(to: CGPoint(x: cx + 7, y: cy + 3)); p.closeSubpath()
+            context.fill(p, with: .color(ink))
+        case 1:  // lápiz en diagonal con punta
+            p.move(to: CGPoint(x: cx - 8, y: cy + 8)); p.addLine(to: CGPoint(x: cx + 6, y: cy - 6))
+            context.stroke(p, with: .color(Color(red: 0.95, green: 0.75, blue: 0.15)), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+            var tip = Path(); tip.move(to: CGPoint(x: cx + 6, y: cy - 6)); tip.addLine(to: CGPoint(x: cx + 10, y: cy - 10))
+            context.stroke(tip, with: .color(ink), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+        case 2:  // pincel: mango y brocha
+            p.move(to: CGPoint(x: cx + 7, y: cy - 9)); p.addLine(to: CGPoint(x: cx - 2, y: cy + 0))
+            context.stroke(p, with: .color(ink), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+            context.fill(Path(ellipseIn: CGRect(x: cx - 9, y: cy + 1, width: 9, height: 9)), with: .color(ink))
+        case 3:  // goma: rectángulo inclinado bicolor
+            var g = context; g.translateBy(x: cx, y: cy); g.rotate(by: .degrees(-24))
+            g.stroke(Path(CGRect(x: -9, y: -5, width: 18, height: 10)), with: .color(Color(red: 0.96, green: 0.62, blue: 0.72)), lineWidth: 3.5)
+            g.stroke(Path(CGRect(x: -9, y: -5, width: 7, height: 10)), with: .color(ink), lineWidth: 3.5)
+        case 4:  // cubo de pintura volcando una gota
+            p.move(to: CGPoint(x: cx - 8, y: cy - 4)); p.addLine(to: CGPoint(x: cx + 6, y: cy - 4))
+            p.addLine(to: CGPoint(x: cx + 4, y: cy + 6)); p.addLine(to: CGPoint(x: cx - 6, y: cy + 6)); p.closeSubpath()
+            context.stroke(p, with: .color(ink), style: StrokeStyle(lineWidth: 2.5, lineJoin: .round))
+            context.fill(Path(ellipseIn: CGRect(x: cx + 6, y: cy + 3, width: 5, height: 7)), with: .color(ink))
+        case 5:  // lazo: elipse punteada con rabillo
+            context.stroke(Path(ellipseIn: CGRect(x: cx - 8, y: cy - 9, width: 16, height: 14)),
+                           with: .color(ink), style: StrokeStyle(lineWidth: 2, dash: [3, 2.5]))
+            var tail = Path(); tail.move(to: CGPoint(x: cx - 3, y: cy + 4)); tail.addLine(to: CGPoint(x: cx - 7, y: cy + 10))
+            context.stroke(tail, with: .color(ink), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+        default:  // texto: la T como dos trazos
+            p.move(to: CGPoint(x: cx - 8, y: cy - 8)); p.addLine(to: CGPoint(x: cx + 8, y: cy - 8))
+            p.move(to: CGPoint(x: cx, y: cy - 8)); p.addLine(to: CGPoint(x: cx, y: cy + 9))
+            context.stroke(p, with: .color(ink), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
+        }
+    }
+
+    /// Línea de tiempo: franja inferior con columna de capas, celdas
+    /// de fotogramas con puntos de keyframe y el cabezal rojo — cuya
+    /// asa es una repisa pisabable (SceneLayout.playheadTop). Su borde
+    /// superior (46) es suelo real; el escalón de 23 a su izquierda es
+    /// la subida caminando.
+    private func drawTimeline(context: inout GraphicsContext, layout: SceneLayout, floorY: CGFloat, stripGray: Color, cellGray: Color, lineGray: Color) {
+        let topY = floorY - SceneLayout.timelineHeight
+        let W = layout.width
+
+        // Escalón de acceso (suelo intermedio hacia la línea de tiempo)
+        let step = CGRect(x: layout.stepMinX, y: floorY - SceneLayout.stepHeight, width: layout.stepMaxX - layout.stepMinX, height: SceneLayout.stepHeight)
+        context.fill(Path(step), with: .color(stripGray))
+        context.stroke(Path(step), with: .color(lineGray), lineWidth: 1.2)
+
+        // Franja principal
+        let strip = CGRect(x: layout.timelineMinX, y: topY, width: W - layout.timelineMinX, height: SceneLayout.timelineHeight)
+        context.fill(Path(strip), with: .color(stripGray))
+        context.stroke(Path(strip), with: .color(lineGray), lineWidth: 1.2)
+        var topEdge = Path(); topEdge.move(to: CGPoint(x: layout.timelineMinX, y: topY)); topEdge.addLine(to: CGPoint(x: W, y: topY))
+        context.stroke(topEdge, with: .color(Color(red: 0.38, green: 0.38, blue: 0.42)), lineWidth: 2)
+
+        // Columna de capas (izquierda de la franja): cabecera, su capa
+        // (tinta naranja, es la suya) y la capa de fondo.
+        let layersX = layout.timelineMinX
+        let layersW: CGFloat = 56
+        var div = Path(); div.move(to: CGPoint(x: layersX + layersW, y: topY)); div.addLine(to: CGPoint(x: layersX + layersW, y: floorY))
+        context.stroke(div, with: .color(lineGray), lineWidth: 1)
+        context.fill(Path(CGRect(x: layersX + 5, y: topY + 4, width: 26, height: 5)), with: .color(Color(red: 0.45, green: 0.45, blue: 0.49)))
+        let rowH: CGFloat = 15
+        let row1 = CGRect(x: layersX + 3, y: topY + 12, width: layersW - 6, height: rowH)
+        context.fill(Path(row1), with: .color(bodyColor.opacity(0.30)))
+        context.fill(Path(ellipseIn: CGRect(x: row1.minX + 3, y: row1.midY - 2.5, width: 5, height: 5)), with: .color(bodyColor))
+        context.fill(Path(CGRect(x: row1.minX + 12, y: row1.midY - 2, width: 24, height: 4)), with: .color(Color(red: 0.35, green: 0.35, blue: 0.38)))
+        let row2 = CGRect(x: layersX + 3, y: topY + 12 + rowH + 2, width: layersW - 6, height: rowH)
+        context.fill(Path(row2), with: .color(Color(red: 0.68, green: 0.68, blue: 0.71)))
+        context.fill(Path(CGRect(x: row2.minX + 12, y: row2.midY - 2, width: 18, height: 4)), with: .color(Color(red: 0.5, green: 0.5, blue: 0.54)))
+
+        // Celdas de fotogramas: regla con ticks cada 5 y dos filas de
+        // celdas; keyframes = circulitos rellenos en su capa.
+        let framesX = layersX + layersW + 4
+        let cellW: CGFloat = 9
+        var fx = framesX
+        var frame = 0
+        while fx + cellW <= W - 3 {
+            if frame % 5 == 0 {
+                var tick = Path(); tick.move(to: CGPoint(x: fx + cellW / 2, y: topY + 8)); tick.addLine(to: CGPoint(x: fx + cellW / 2, y: topY + 11))
+                context.stroke(tick, with: .color(lineGray), lineWidth: 1)
+            }
+            let c1 = CGRect(x: fx, y: topY + 12, width: cellW - 1.5, height: rowH)
+            context.fill(Path(c1), with: .color(frame % 2 == 0 ? cellGray : stripGray))
+            if frame % 12 == 0 {
+                context.fill(Path(ellipseIn: CGRect(x: c1.midX - 2.2, y: c1.midY - 2.2, width: 4.4, height: 4.4)), with: .color(Color(red: 0.25, green: 0.25, blue: 0.28)))
+            }
+            let c2 = CGRect(x: fx, y: topY + 12 + rowH + 2, width: cellW - 1.5, height: rowH)
+            context.fill(Path(c2), with: .color(Color(red: 0.83, green: 0.83, blue: 0.86)))
+            fx += cellW
+            frame += 1
+        }
+
+        // Cabezal de reproducción: línea roja sobre las celdas y asa
+        // sobre el borde — el asa es pisabable (deriva despacio).
+        let phX = layout.playheadX
+        var line = Path(); line.move(to: CGPoint(x: phX, y: topY)); line.addLine(to: CGPoint(x: phX, y: floorY))
+        context.stroke(line, with: .color(.red.opacity(0.75)), lineWidth: 1.6)
+        let handle = CGRect(x: phX - layout.playheadHalfWidth, y: floorY - SceneLayout.playheadTop,
+                            width: layout.playheadHalfWidth * 2, height: SceneLayout.playheadTop - SceneLayout.timelineHeight)
+        context.fill(Path(handle), with: .color(Color(red: 0.85, green: 0.15, blue: 0.15)))
+        context.stroke(Path(handle), with: .color(Color(red: 0.6, green: 0.08, blue: 0.08)), lineWidth: 1)
+    }
+
+    /// Paneles de la derecha: el de Propiedades (repisa a 104, la de
+    /// los «botones» de siempre) y la repisa de Muestras (a 196).
+    /// Cuelgan de su borde superior — que es la superficie pisabable —
+    /// y llevan cuadraditos de color; su naranja va destacado.
+    private func drawSidePanels(context: inout GraphicsContext, layout: SceneLayout, floorY: CGFloat, panelGray: Color, lineGray: Color) {
+        let swatches: [Color] = [bodyColor,
+                                 Color(red: 0.16, green: 0.16, blue: 0.18), Color(red: 0.85, green: 0.2, blue: 0.2),
+                                 Color(red: 0.2, green: 0.55, blue: 0.9), Color(red: 0.3, green: 0.75, blue: 0.35),
+                                 Color(red: 0.95, green: 0.8, blue: 0.2), Color(red: 0.6, green: 0.4, blue: 0.85),
+                                 Color(red: 0.95, green: 0.55, blue: 0.7)]
+        // Panel de Propiedades
+        let pTop = floorY - SceneLayout.panelHeight
+        let panel = CGRect(x: layout.panelMinX, y: pTop, width: layout.panelMaxX - layout.panelMinX, height: 62)
+        context.fill(Path(panel), with: .color(panelGray))
+        context.stroke(Path(panel), with: .color(lineGray), lineWidth: 1)
+        var lipP = Path(); lipP.move(to: CGPoint(x: panel.minX, y: pTop)); lipP.addLine(to: CGPoint(x: panel.maxX, y: pTop))
+        context.stroke(lipP, with: .color(Color(red: 0.88, green: 0.88, blue: 0.90)), lineWidth: 2)
+        context.fill(Path(CGRect(x: panel.minX + 6, y: pTop + 5, width: 40, height: 5)), with: .color(Color(red: 0.85, green: 0.85, blue: 0.88)))
+        for i in 0..<8 {
+            let col = i % 4, row = i / 4
+            let sq = CGRect(x: panel.minX + 7 + CGFloat(col) * 17, y: pTop + 16 + CGFloat(row) * 17, width: 13, height: 13)
+            context.fill(Path(sq), with: .color(swatches[i]))
+            if i == 0 { context.stroke(Path(sq), with: .color(.white), lineWidth: 1.8) }   // la suya, destacada
+        }
+        context.fill(Path(CGRect(x: panel.minX + 82, y: pTop + 16, width: 30, height: 5)), with: .color(Color(red: 0.62, green: 0.62, blue: 0.66)))
+        context.fill(Path(CGRect(x: panel.minX + 82, y: pTop + 26, width: 22, height: 5)), with: .color(Color(red: 0.62, green: 0.62, blue: 0.66)))
+        // Repisa de Muestras (arriba): una fila de colores
+        let sTop = floorY - SceneLayout.shelfHeight
+        let shelf = CGRect(x: layout.shelfMinX, y: sTop, width: layout.shelfMaxX - layout.shelfMinX, height: 30)
+        context.fill(Path(shelf), with: .color(panelGray))
+        context.stroke(Path(shelf), with: .color(lineGray), lineWidth: 1)
+        var lipS = Path(); lipS.move(to: CGPoint(x: shelf.minX, y: sTop)); lipS.addLine(to: CGPoint(x: shelf.maxX, y: sTop))
+        context.stroke(lipS, with: .color(Color(red: 0.88, green: 0.88, blue: 0.90)), lineWidth: 2)
+        for i in 0..<5 {
+            let sq = CGRect(x: shelf.minX + 6 + CGFloat(i) * 16, y: sTop + 9, width: 12, height: 12)
+            context.fill(Path(sq), with: .color(swatches[i]))
+            if i == 0 { context.stroke(Path(sq), with: .color(.white), lineWidth: 1.6) }
+        }
     }
 
     private func drawFrozenPatch(context: inout GraphicsContext, x: CGFloat, groundY: CGFloat) {
