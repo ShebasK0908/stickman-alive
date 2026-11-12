@@ -376,7 +376,7 @@ final class StickmanController: ObservableObject {
 
     private func setThought(_ text: String) {
         thought = text
-        thoughtTimer = text.isEmpty ? 0 : 3.0
+        thoughtTimer = text.isEmpty ? 0 : 3.6  // R3-6 (B): el pensamiento se lee mas rato
     }
 
     func setFacing(_ f: CGFloat) {
@@ -466,7 +466,7 @@ final class StickmanController: ObservableObject {
             if Double.random(in: 0...1) < 0.35 { setThought("vale, lo hago") }
             drives.registerKindPlay(); memory.kindPlays += 1
         } else if Bool.random() {
-            startOverride(.denying, duration: 1.5)
+            startOverride(.denying, duration: 1.8)  // R3-6 (B): el "no" se ve mas rato (+20 %)
             setThought(suggested == .sleeping ? "no tengo sueño" : "no, ahora no")
         } else {
             let alternatives: [StickmanAction] = [.dancing, .walking, .sitting, .sword, .waving, .laughing, .celebrating]
@@ -485,7 +485,7 @@ final class StickmanController: ObservableObject {
             planStepStarted = false; mode = .plan
             setThought("¡MODO SECOND COMING!")
         } else {
-            startOverride(.denying, duration: 1.5)
+            startOverride(.denying, duration: 1.8)  // R3-6 (B): el "no" se ve mas rato (+20 %)
             setThought("hoy no me apetece lucirme")
         }
     }
@@ -537,7 +537,7 @@ final class StickmanController: ObservableObject {
         if Double.random(in: 0...1) <= obedienceProbability(for: .jumping) {
             performJump(vx: 0)
         } else {
-            startOverride(.denying, duration: 1.3); setThought("no, ahora no salto")
+            startOverride(.denying, duration: 1.55); setThought("no, ahora no salto")  // R3-6 (B): +19 %
         }
     }
 
@@ -772,19 +772,19 @@ final class StickmanController: ObservableObject {
         }
         if drives.anger > 85 {
             // v9: furia maxima -> punetazo descendente al suelo (groundPound, onda en 0.64)
-            startOverride(.groundPounding, duration: 1.15)
+            startOverride(.groundPounding, duration: 1.4)  // R3-6 (B): el golpe al suelo se ve mas (+22 %)
             shakeAmount = 12
             setThought("¡YA ESTÁ BIEN!")
         } else if drives.anger > 72 {
             plan = PlanLibrary.showOffPowers(); planStepStarted = false; mode = .plan
             setThought("¡YA ESTÁ BIEN! ¡SECOND COMING!")
         } else if abs(distance) < 46 {
-            startOverride(.scared, duration: 0.9)
-            setFacing(distance >= 0 ? -1 : 1); scaredBurstX = facing * 240
+            startOverride(.scared, duration: 1.45)  // R3-6 (B): el susto se ve mas rato (+21 %)
+            setFacing(distance >= 0 ? -1 : 1); scaredBurstX = facing * 320
             setThought("¡eh! ¡cuidado!")
         } else if abs(distance) < 190 {
             setFacing(distance >= 0 ? 1 : -1)
-            startOverride(.fighting, duration: 1.7)
+            startOverride(.fighting, duration: 2.6)  // R3-6 (B): pelea con el dedo mas rato (+18 %)
             setThought(Bool.random() ? "¡ese dedo es mío!" : "¡ven aquí, dedo!")
         } else {
             setFacing(distance >= 0 ? 1 : -1)
@@ -917,7 +917,7 @@ final class StickmanController: ObservableObject {
         if let paused = pausedPlan, Double.random(in: 0...1) < 0.55 {
             plan = paused; planStepStarted = false; setThought("sigo con lo mío")
         } else { plan = nil }
-        pausedPlan = nil; mode = .plan; planGapTimer = 0.5
+        pausedPlan = nil; mode = .plan; planGapTimer = 0.25  // R3-2 (B): al despertar, vuelve antes a la accion
     }
 
     // MARK: IA tactil: percibe -> decide -> anima
@@ -938,14 +938,14 @@ final class StickmanController: ObservableObject {
         // llegar se sienta a mirarlo.
         if surface == .floor, chaseCooldown <= 0, !isChasingFinger {
             let distF = fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62)
-            let wantsChase = drives.curiosity > 52
-            if distF > 170 && distF < 460 && fingerTracker.speed < 300 && wantsChase
-                && Double.random(in: 0...1) < 0.3 {
+            let wantsChase = drives.curiosity > 46  // R3-2 (B): persigue al dedo antes y desde mas lejos
+            if distF > 150 && distF < 520 && fingerTracker.speed < 340 && wantsChase
+                && Double.random(in: 0...1) < 0.55 {
                 isChasingFinger = true
-                chaseCooldown = 9
+                chaseCooldown = 5
                 lastDecision = "perseguir el dedo (ChaseMouse)"
                 setFacing(fingerTracker.point.x >= x ? 1 : -1)
-                startOverride(.chasingFinger, duration: 2.6)
+                startOverride(.chasingFinger, duration: 3.2)
                 setThought("¡a por ese dedo!")
                 return
             }
@@ -953,13 +953,13 @@ final class StickmanController: ObservableObject {
 
         // v9 fingerShield: con acoso alto y el dedo quieto y cerca, se
         // atrinchera DETRAS del dedo en vez de huir o pelear.
-        if interactionBrain.harassment > 55, fingerTracker.speed < 120 {
+        if interactionBrain.harassment > 48, fingerTracker.speed < 120 {  // R3-4 (B): se atrinchera tras el dedo antes
             let distF2 = fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62)
             if distF2 < 120, surface == .floor {
                 lastDecision = "atrincherarse tras el dedo"
-                iaCooldown = 2.2
+                iaCooldown = 1.4  // R3-6 (B): tras atrincherarse reacciona antes
                 setFacing(fingerTracker.point.x >= x ? 1 : -1)
-                startOverride(.fingerShielding, duration: 1.7)
+                startOverride(.fingerShielding, duration: 2.0)  // R3-6 (B): atrincherado mas rato (+18 %)
                 setThought("¡detrás de ti no me da!")
                 return
             }
@@ -978,7 +978,7 @@ final class StickmanController: ObservableObject {
 
     private func executeDecision(_ decision: InteractionDecision) {
         lastDecision = decision.rawValue
-        iaCooldown = 0.9
+        iaCooldown = 0.55  // R3-2 (B): las reacciones se encadenan antes
         let fingerX = fingerTracker.point.x
         switch decision {
         case .none: break
@@ -987,42 +987,42 @@ final class StickmanController: ObservableObject {
             if abs(fingerX - x) > 110 {
                 // v7/v8: a veces se asoma a espiar o le hace el gesto de «ven aqui»
                 let roll = Double.random(in: 0...1)
-                if roll < 0.25 { startOverride(.peeking, duration: 2.6) }
-                else if roll < 0.5 { startOverride(.beckoning, duration: 1.6); setThought("ven, anda") }
-                else { startOverride(.walking, duration: 1.0) }
+                if roll < 0.35 { startOverride(.peeking, duration: 3.0) }  // R3-6 (B): espia mas rato (+15 %)
+                else if roll < 0.6 { startOverride(.beckoning, duration: 1.9); setThought("ven, anda") }  // R3-6 (B): llama mas rato (+19 %)
+                else { startOverride(.walking, duration: 1.2) }  // R3-6 (B): se acerca mas rato (+20 %)
             }
-            else { startOverride(.idle, duration: 0.9) }
+            else { startOverride(.idle, duration: 1.1) }  // R3-6 (B): se queda mirando mas rato (+22 %)
             setThought(decision.thought)
         case .greet:
-            greetCooldown = 6
+            greetCooldown = 3.5  // R3-2 (B): saluda mas a menudo
             setFacing(fingerX >= x ? 1 : -1)
             // v8: la mitad de las veces choca los cinco en vez de saludar
-            if Double.random(in: 0...1) < 0.5 {
-                startOverride(.highFiving, duration: 1.4)
+            if Double.random(in: 0...1) < 0.6 {  // R3-4 (B): choca los cinco mas
+                startOverride(.highFiving, duration: 1.7)  // R3-6 (B): el choque de manos se ve mas (+21 %)
                 setThought("¡choca esos cinco!")
             } else {
-                startOverride(.waving, duration: 1.6)
+                startOverride(.waving, duration: 1.9)  // R3-6 (B): saluda mas rato (+19 %)
                 setThought(decision.thought)
             }
         case .flee:
             setFacing(fingerX >= x ? -1 : 1)
-            startOverride(.fleeing, duration: 1.1)
+            startOverride(.fleeing, duration: 1.35)  // R3-6 (B): huye mas rato (+23 %)
             setThought(decision.thought)
         case .dodgeDuck:
-            startOverride(.dodging, duration: 0.55)
+            startOverride(.dodging, duration: 0.68)  // R3-6 (B): agachado mas rato (+24 %)
             setThought(decision.thought)
         case .dodgeRoll:
             setFacing(fingerX >= x ? -1 : 1)
-            dodgeBurst = 250; dodgeBurstTimer = 0.55
-            startOverride(.rolling, duration: 0.62)
+            dodgeBurst = 300; dodgeBurstTimer = 0.55  // R3-2 (B): la esquiva rodando llega mas lejos
+            startOverride(.rolling, duration: 0.75)  // R3-6 (B): rueda mas rato (+21 %)
             setThought(decision.thought)
         case .leanBack:
-            startOverride(.leaningBack, duration: 0.9)
+            startOverride(.leaningBack, duration: 1.1)  // R3-6 (B): arqueado mas rato (+22 %)
             setThought(decision.thought)
         case .sidestep:
             setFacing(fingerX >= x ? -1 : 1)
-            dodgeBurst = 200; dodgeBurstTimer = 0.5
-            startOverride(.sidestepping, duration: 0.7)
+            dodgeBurst = 260; dodgeBurstTimer = 0.5  // R3-2 (B): el paso lateral llega mas lejos
+            startOverride(.sidestepping, duration: 0.85)  // R3-6 (B): paso lateral mas rato (+21 %)
             setThought(decision.thought)
         case .jumpOver:
             setFacing(fingerX >= x ? 1 : -1)
@@ -1031,16 +1031,16 @@ final class StickmanController: ObservableObject {
         case .block:
             setFacing(fingerX >= x ? 1 : -1)
             // v9: a veces desvia con la palma en vez de absorber el golpe (y queda cargado para contraatacar)
-            if Double.random(in: 0...1) < 0.45 {
-                startOverride(.parrying, duration: 0.8)
+            if Double.random(in: 0...1) < 0.55 {  // R3-4 (B): desvia con la palma mas
+                startOverride(.parrying, duration: 0.95)  // R3-6 (B): el desvio se ve mas (+19 %)
                 setThought("¡desviado!")
             } else {
-                startOverride(.blocking, duration: 0.85)
+                startOverride(.blocking, duration: 1.05)  // R3-6 (B): en guardia mas rato (+24 %)
                 setThought(decision.thought)
             }
         case .grabFinger:
             setFacing(fingerX >= x ? 1 : -1)
-            startOverride(.grabbingFinger, duration: 1.2)
+            startOverride(.grabbingFinger, duration: 1.9)  // R3-6 (B): agarra el dedo mas rato (+19 %)
             isGrabbingFinger = true
             setThought(decision.thought)
         case .counterAttack:
@@ -1050,40 +1050,40 @@ final class StickmanController: ObservableObject {
             let dist = abs(fingerX - x)
             let pick = (Int(interactionBrain.harassment) + Int(dist)) % 7
             if dist > 120 {
-                startOverride(.tackling, duration: 1.1)   // v7: a media distancia, placaje
+                startOverride(.tackling, duration: 1.35)  // R3-6 (B): el placaje se ve mas (+23 %)
                 setThought("¡placaje!")
             } else {
                 switch pick {
-                case 0: startOverride(.uppercut, duration: 1.05); setThought("¡gancho!")
-                case 1: startOverride(.backKicking, duration: 0.9); setThought("¡patada trasera!")
-                case 2: startOverride(.kneeStriking, duration: 0.85); setThought("¡rodillazo!")
-                case 3: startOverride(.elbowStriking, duration: 0.8); setThought("¡codazo!")
-                case 4: startOverride(.headbutting, duration: 0.95); setThought("¡cabezazo!")
-                case 5: startOverride(.feinting, duration: 0.9); setThought("¡amago!")   // v9: finta y a otra cosa
-                default: startOverride(.fighting, duration: 2.6); setThought(decision.thought)
+                case 0: startOverride(.uppercut, duration: 1.25); setThought("¡gancho!")  // R3-6 (B): +19 %
+                case 1: startOverride(.backKicking, duration: 1.1); setThought("¡patada trasera!")  // R3-6 (B): +22 %
+                case 2: startOverride(.kneeStriking, duration: 1.05); setThought("¡rodillazo!")  // R3-6 (B): +24 %
+                case 3: startOverride(.elbowStriking, duration: 0.95); setThought("¡codazo!")  // R3-6 (B): +19 %
+                case 4: startOverride(.headbutting, duration: 1.15); setThought("¡cabezazo!")  // R3-6 (B): +21 %
+                case 5: startOverride(.feinting, duration: 1.1); setThought("¡amago!")  // R3-6 (B): +22 %
+                default: startOverride(.fighting, duration: 3.0); setThought(decision.thought)  // R3-6 (B): la rafaga dura mas (+15 %)
                 }
             }
         case .miniAwakening:
             setFacing(fingerX >= x ? 1 : -1)
             setThought(decision.thought)
-            startOverride(.usingPower, duration: 0.9)
+            startOverride(.usingPower, duration: 1.1)  // R3-6 (B): el superpunetazo se ve mas (+22 %)
             activatePower(.superPunch)
-            awakeningAuraTimer = 2.5
+            awakeningAuraTimer = 3.0  // R3-6 (B): el aura dura mas (+20 %)
         case .hide:
             if let idx = nearestIntactObjectIndex() {
                 hideTargetX = objects[idx].x - facing * 6
                 hideObjectID = objects[idx].id
                 setFacing(objects[idx].x >= x ? 1 : -1)
-                startOverride(.walking, duration: 2.0)
+                startOverride(.walking, duration: 2.4)  // R3-6 (B): corre a esconderse mas rato (+20 %)
                 setThought(decision.thought)
             } else {
-                startOverride(.hiding, duration: 2.0)
+                startOverride(.hiding, duration: 2.4)  // R3-6 (B): escondido mas rato (+20 %)
                 setThought(decision.thought)
             }
         case .shield:
             setFacing(fingerX >= x ? 1 : -1)
             shieldKind = objects.first(where: { ($0.kind == .block || $0.kind == .sword) && $0.state == .intact })?.kind
-            startOverride(.blocking, duration: 1.3)
+            startOverride(.blocking, duration: 1.55)  // R3-6 (B): con escudo mas rato (+19 %)
             shieldKind = objects.first(where: { ($0.kind == .block || $0.kind == .sword) && $0.state == .intact })?.kind
             setThought(decision.thought)
         }
@@ -1111,11 +1111,12 @@ final class StickmanController: ObservableObject {
         if thoughtTimer > 0 { thoughtTimer -= dt; if thoughtTimer <= 0 { thought = "" } }
 
         // Micro-actividad continua: nunca esta totalmente quieto
+        // R3-2 (B): micro-acciones casi el doble de frecuentes y mas visibles
         microTimer -= dt
         if microTimer <= 0 {
-            microTimer = Double.random(in: 2.2...4.0)
+            microTimer = Double.random(in: 1.1...2.0)
             let options = action == .resting || action == .sleeping
-                ? ["respira", "zzz"] : ["respira", "mira a un lado", "parpadea", "se rasca la cabeza", "cambia el peso", "mira su bocadillo"]
+                ? ["respira", "zzz"] : ["respira", "mira a un lado", "parpadea", "se rasca la cabeza", "cambia el peso", "mira su bocadillo", "mira al dedo", "se estira", "hace un gesto con la mano", "se sacude el polvo", "da un saltito"]
             microActivity = options.randomElement() ?? "respira"
         }
 
@@ -1135,8 +1136,8 @@ final class StickmanController: ObservableObject {
                 let d = fingerTracker.distance(toStickmanX: x, height: platformHeight + heightAboveGround + 62)
                 if d < 74 {
                     isChasingFinger = false
-                    chaseSitTimer = 2.6
-                    startOverride(.sittingFacingFinger, duration: 2.6)
+                    chaseSitTimer = 3.4  // R3-2 (B): se queda mirando al dedo mas rato
+                    startOverride(.sittingFacingFinger, duration: 3.4)
                     setThought("te miro, dedo...")
                 }
             }
@@ -1152,7 +1153,7 @@ final class StickmanController: ObservableObject {
         // Escape del agarre: si le sujetan mas de ~2,2 s se sacude y escapa solo
         if isDragged {
             dragTime += dt
-            if dragTime > 1.3 { action = .escaping }
+            if dragTime > 0.9 { action = .escaping }  // R3-2 (B): el forcejeo se ve antes
             if dragTime >= 2.2 {
                 isDragged = false
                 dragEscapeSignal += 1
@@ -1162,7 +1163,7 @@ final class StickmanController: ObservableObject {
                 // lanzamiento (330/390, como antes) se aplica al terminar
                 // el clip, en la rama de expiracion del override de tick.
                 startOverride(.escapeBurst, duration: 0.85)
-                pendingEscapeThrow = (vx: (fingerTracker.point.x >= x ? -1 : 1) * 330, vy: 390)
+                pendingEscapeThrow = (vx: (fingerTracker.point.x >= x ? -1 : 1) * 370, vy: 420)  // R3-2 (B): sale lanzado con mas fuerza
             }
             return
         }
@@ -1229,13 +1230,13 @@ final class StickmanController: ObservableObject {
                     heightAboveGround = ground; velocityY = 0; velocityX = 0
                     isWallSliding = false
                     if jumpWindup <= 0 {
-                        if impact > 980 { startOverride(.rolling, duration: 0.62); overrideLandingChain = .dizzy }
+                        if impact > 980 { startOverride(.rolling, duration: 0.75); overrideLandingChain = .dizzy }  // R3-6 (B): rueda mas rato (+21 %)
                         // v7 crawl: a veces aterriza a cuatro patas y avanza arrastrandose
                         else if impact > 430, Double.random(in: 0...1) < 0.3 { startOverride(.crawling, duration: 1.1) }
                         else if impact > 430 { startOverride(.landing, duration: 0.42) }
                         // v3 Bounce: a veces rebota de contento al aterrizar suave
                         else if Double.random(in: 0...1) < 0.22 { startOverride(.bouncing, duration: 0.9) }
-                        else { action = .idle; mode = .plan; planGapTimer = 0.4 }
+                        else { action = .idle; mode = .plan; planGapTimer = 0.2 }  // R3-2 (B)
                     }
                 }
                 clampToStage(stageWidth)
@@ -1251,7 +1252,7 @@ final class StickmanController: ObservableObject {
             if let target = hideTargetX, action == .walking, abs(x - target) < 20 {
                 hideTargetX = nil
                 hidingObjectID = hideObjectID
-                startOverride(.hiding, duration: 2.4)
+                startOverride(.hiding, duration: 2.8)  // R3-6 (B): agazapado tras el objeto mas rato (+17 %)
                 hidingObjectID = hideObjectID
             }
             if overrideTimer <= 0 {
@@ -1279,10 +1280,10 @@ final class StickmanController: ObservableObject {
                     if Double.random(in: 0...1) < 0.5 {
                         startOverride(.sleepRolling, duration: 1.8)
                     } else {
-                        mode = .plan; if plan == nil { planGapTimer = 0.3 }
+                        mode = .plan; if plan == nil { planGapTimer = 0.15 }  // R3-2 (B)
                     }
                 } else {
-                    mode = .plan; if plan == nil { planGapTimer = 0.3 }
+                    mode = .plan; if plan == nil { planGapTimer = 0.15 }  // R3-2 (B)
                 }
             }
             groundSnap(dt: dt)
@@ -1356,7 +1357,7 @@ final class StickmanController: ObservableObject {
                     if let power = step.power { finishPower(power) }
                     if step.action == .flying, activePower == .flight { activePower = nil }
                     plan!.advance(); planStepStarted = false
-                    if plan!.isFinished { plan = nil; currentPlanName = "Decidiendo..."; planGapTimer = Double.random(in: 0.4...1.0) }
+                    if plan!.isFinished { plan = nil; currentPlanName = "Decidiendo..."; planGapTimer = Double.random(in: 0.15...0.45) }  // R3-2 (B): menos pausa entre planes
                 }
             }
         }
