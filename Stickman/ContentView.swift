@@ -290,7 +290,9 @@ struct ContentView: View {
     private func screenPos(of c: StickmanController, size: CGSize) -> CGPoint {
         let groundY = size.height - 10
         switch c.surface {
-        case .ceiling: return CGPoint(x: c.x, y: 6)
+        // ESCENA V11: el techo es el borde de la barra de menús (20),
+        // el mismo ancla que usa StickmanView.feetY.
+        case .ceiling: return CGPoint(x: c.x, y: SceneLayout.menuBarHeight)
         case .wallLeft: return CGPoint(x: 30, y: groundY - c.heightAboveGround)
         case .wallRight: return CGPoint(x: size.width - 30, y: groundY - c.heightAboveGround)
         default: return CGPoint(x: c.x, y: groundY - c.platformHeight - c.heightAboveGround)
