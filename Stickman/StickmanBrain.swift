@@ -187,14 +187,14 @@ struct InteractionBrain {
     mutating func registerGrabAttempt(now: Double) {
         if now - lastGrabTime < 6 { grabAttempts += 1 } else { grabAttempts = 1 }
         lastGrabTime = now
-        harassment = min(100, harassment + 16)
+        harassment = min(100, harassment + 20)  // R3-2 (B): el acoso escala antes al contraataque
     }
-    mutating func registerFastApproach() { harassment = min(100, harassment + 7) }
-    mutating func registerRoughTap() { harassment = min(100, harassment + 9) }
-    mutating func registerKindness() { harassment = max(0, harassment - 22); grabAttempts = 0 }
+    mutating func registerFastApproach() { harassment = min(100, harassment + 10) }  // R3-6 (B): el acercamiento rapido mosquea mas
+    mutating func registerRoughTap() { harassment = min(100, harassment + 12) }  // R3-2 (B)
+    mutating func registerKindness() { harassment = max(0, harassment - 16); grabAttempts = 0 }  // R3-6 (B): perdona mas despacio
     mutating func tick(dt: Double, fingerPresent: Bool) {
         // Con calma decae; si el dedo esta encima, decae mas despacio
-        harassment = max(0, harassment - dt * (fingerPresent ? 2.5 : 7.0))
+        harassment = max(0, harassment - dt * (fingerPresent ? 1.8 : 5.5))  // R3-6 (B): el acoso se le pasa mas despacio
         if harassment < 20 { grabAttempts = 0 }
     }
 
@@ -203,14 +203,14 @@ struct InteractionBrain {
                 drives: Drives, hasShieldObject: Bool, hasHidingSpot: Bool) -> InteractionDecision {
         guard finger.present else { return .none }
         let dist = finger.distance(toStickmanX: stickmanX, height: stickmanHeight)
-        let fast = finger.speed > 340
-        let closingFast = finger.approachSpeed > 240
+        let fast = finger.speed > 320  // R3-4 (B): el dedo rapido se nota antes
+        let closingFast = finger.approachSpeed > 220  // R3-4 (B)
 
         // Muy cerca y viniendo rapido: defensa inmediata, escala con el acoso
         if dist < 74 && (closingFast || fast) {
-            if harassment > 78 { return .miniAwakening }
-            if harassment > 52 { return .counterAttack }
-            if hasShieldObject && harassment > 30 { return .shield }
+            if harassment > 70 { return .miniAwakening }  // R3-4 (B): el mini despertar llega antes
+            if harassment > 46 { return .counterAttack }  // R3-4 (B): contraataca antes
+            if hasShieldObject && harassment > 26 { return .shield }  // R3-4 (B)
             if drives.energy < 30 && hasHidingSpot { return .hide }
             // Esquiva variada: agacharse, rodar, arquearse, paso lateral o saltar por encima
             switch (Int(harassment) + Int(dist)) % 5 {
@@ -223,17 +223,17 @@ struct InteractionBrain {
         }
         // Le han intentado agarrar varias veces seguidas: forcejea / contraataca
         if dist < 96 && grabAttempts >= 2 {
-            return harassment > 60 ? .counterAttack : .grabFinger
+            return harassment > 54 ? .counterAttack : .grabFinger  // R3-4 (B)
         }
         // Cerca pero sin violencia: guardia si hay acoso previo, si no curiosidad
-        if dist < 110 {
-            if harassment > 38 { return .block }
+        if dist < 130 {  // R3-2 (B): nota al dedo desde mas lejos
+            if harassment > 34 { return .block }  // R3-4 (B): se pone en guardia antes
             if fast { return .flee }
             return drives.sociability > 45 ? .greet : .curious
         }
         // A media distancia acercandose rapido: se prepara / huye si ya hay acoso
-        if dist < 190 && closingFast {
-            return harassment > 30 ? .flee : .block
+        if dist < 220 && closingFast {  // R3-2 (B)
+            return harassment > 26 ? .flee : .block  // R3-4 (B)
         }
         return .none
     }
@@ -258,17 +258,17 @@ struct Drives {
             boredom = max(0, boredom - dt * 1.0)
         } else {
             energy = max(5, energy - r * 3.5)
-            boredom = min(100, boredom + (interacting ? -r * 18 : r * 9))
-            curiosity = min(100, curiosity + r * 2.0)
-            anger = max(0, anger - r * 6)
+            boredom = min(100, boredom + (interacting ? -r * 18 : r * 16))  // R3-2 (B) + R3-4 (B): se aburre aun antes
+            curiosity = min(100, curiosity + r * 2.5)  // R3-4 (B): mas curioso antes
+            anger = max(0, anger - r * 5)  // R3-4 (B): se le pasa el enfado mas despacio
         }
         if interacting { boredom = max(0, boredom - dt * 0.8) }
-        playfulness = min(100, max(10, playfulness + (interacting ? r * 4 : -r * 1)))
-        sociability = min(100, max(10, sociability + r * 1.2))
-        mischief = min(100, max(0, mischief + (boredom > 65 ? r * 5 : -r * 1.5)))
+        playfulness = min(100, max(10, playfulness + (interacting ? r * 5 : -r * 1)))  // R3-4 (B): se anima mas al jugar
+        sociability = min(100, max(10, sociability + r * 1.5))  // R3-4 (B): busca compania antes
+        mischief = min(100, max(0, mischief + (boredom > 60 ? r * 6.5 : -r * 1.5)))  // R3-4 (B): la travesura brota antes y mas fuerte
     }
 
-    mutating func registerAnnoyance() { anger = min(100, anger + 16); mischief = min(100, mischief + 6) }
+    mutating func registerAnnoyance() { anger = min(100, anger + 20); mischief = min(100, mischief + 8) }  // R3-6 (B): cada molestia enfada mas
     mutating func registerKindPlay() { sociability = min(100, sociability + 7); playfulness = min(100, playfulness + 6); anger = max(0, anger - 5) }
 }
 
@@ -287,11 +287,11 @@ enum Emotion: String {
     static func derive(from d: Drives, resting: Bool) -> Emotion {
         if resting || d.energy < 18 { return .dormido }
         if d.anger > 72 { return .furioso }
-        if d.anger > 45 { return .enfadado }
-        if d.boredom > 70 { return .aburrido }
-        if d.mischief > 62 { return .travieso }
-        if d.curiosity > 68 { return .curioso }
-        if d.playfulness > 62 || d.sociability > 68 { return .contento }
+        if d.anger > 40 { return .enfadado }  // R3-4 (B)
+        if d.boredom > 64 { return .aburrido }  // R3-4 (B)
+        if d.mischief > 56 { return .travieso }  // R3-4 (B)
+        if d.curiosity > 62 { return .curioso }  // R3-4 (B)
+        if d.playfulness > 56 || d.sociability > 62 { return .contento }  // R3-4 (B)
         return .tranquilo
     }
 }
@@ -305,7 +305,7 @@ struct ShortMemory {
 
     mutating func tick(dt: Double) {
         decayTimer += dt
-        if decayTimer > 20 { // cada 20 s olvida un poco
+        if decayTimer > 28 { // R3-4 (B): cada 28 s olvida un poco (recuerda mas)
             decayTimer = 0
             if annoyances > 0 { annoyances -= 1 }
             if kindPlays > 0 { kindPlays -= 1 }
@@ -426,7 +426,7 @@ enum PlanLibrary {
     static func wander() -> Plan {
         Plan(name: "Deambular", steps: [
             PlanStep(action: .walking, duration: Double.random(in: 2.0...3.6), thought: ""),
-            PlanStep(action: .idle, duration: 1.6, thought: ""),
+            PlanStep(action: .idle, duration: 1.0, thought: ""),  // R3-4 (B): menos parado entre paseos
             PlanStep(action: .walking, duration: Double.random(in: 1.6...3.0), thought: "")
         ])
     }
@@ -581,41 +581,41 @@ enum PlanLibrary {
     /// planes sociales ni los unicos de Victim, que salieron con el duo.
     static func choosePlan(drives: Drives, memory: ShortMemory, perception: Perception) -> Plan {
         var candidates: [(weight: Double, plan: Plan)] = []
-        candidates.append((weight: 18 + drives.curiosity * 0.5, plan: exploreUI()))
-        candidates.append((weight: 14 + drives.playfulness * 0.5, plan: playBall()))
-        candidates.append((weight: 12 + drives.sociability * 0.25, plan: drawCreature()))
-        candidates.append((weight: 12, plan: buildCorner()))
-        candidates.append((weight: 9, plan: buildHouse()))
-        candidates.append((weight: 8, plan: drawSwordAndFence()))
-        candidates.append((weight: 10 + drives.curiosity * 0.3, plan: wander()))
+        candidates.append((weight: 20 + drives.curiosity * 0.55, plan: exploreUI()))  // R3-4 (B): explora mas
+        candidates.append((weight: 18 + drives.playfulness * 0.5, plan: playBall()))  // R3-2 (B): mas dibujar y jugar
+        candidates.append((weight: 18 + drives.sociability * 0.25, plan: drawCreature()))
+        candidates.append((weight: 16, plan: buildCorner()))
+        candidates.append((weight: 12, plan: buildHouse()))
+        candidates.append((weight: 12, plan: drawSwordAndFence()))
+        candidates.append((weight: 12 + drives.curiosity * 0.35, plan: wander()))  // R3-4 (B): deambula mas
         // v3 roaming 360 y vida de bordes (ambos personajes)
-        candidates.append((weight: 13 + drives.curiosity * 0.35, plan: climbWallAndCeiling(toLeft: Bool.random(), stageWidth: perception.stageWidth)))
+        candidates.append((weight: 15 + drives.curiosity * 0.4, plan: climbWallAndCeiling(toLeft: Bool.random(), stageWidth: perception.stageWidth)))  // R3-4 (B): trepa mas
         candidates.append((weight: 9, plan: climbHalfway(toLeft: Bool.random(), stageWidth: perception.stageWidth)))
-        candidates.append((weight: 10 + drives.boredom * 0.2, plan: dangleOnEdge(stageWidth: perception.stageWidth)))
-        candidates.append((weight: 7 + drives.boredom * 0.25, plan: lieDownPlan()))
+        candidates.append((weight: 12 + drives.boredom * 0.25, plan: dangleOnEdge(stageWidth: perception.stageWidth)))  // R3-4 (B)
+        candidates.append((weight: 8 + drives.boredom * 0.3, plan: lieDownPlan()))  // R3-4 (B)
         // El "amigo dibujado" de AvA 4 sigue: es un objeto que cobra vida, no un segundo personaje
-        candidates.append((weight: 10 + drives.sociability * 0.55 + Double(memory.kindPlays) * 4, plan: drawFriend()))
+        candidates.append((weight: 14 + drives.sociability * 0.55 + Double(memory.kindPlays) * 4, plan: drawFriend()))  // R3-2 (B)
         // Integracion v7/v8/v9: vida nueva del repertorio ampliado
-        candidates.append((weight: 6 + drives.playfulness * 0.25, plan: exerciseRoutine()))
-        candidates.append((weight: 7 + drives.boredom * 0.2, plan: snackRoutine()))
-        candidates.append((weight: 2.5, plan: sneezeRoutine()))
-        candidates.append((weight: 2.0, plan: hiccupRoutine()))
-        candidates.append((weight: 2.0, plan: shiverRoutine()))
-        if drives.energy < 42 { candidates.append((weight: 11, plan: calmRoutine())) }
-        if drives.playfulness > 50 { candidates.append((weight: 6, plan: horseRoutine(stageWidth: perception.stageWidth))) }
+        candidates.append((weight: 8 + drives.playfulness * 0.35, plan: exerciseRoutine()))  // R3-4 (B): hace mas ejercicio
+        candidates.append((weight: 9 + drives.boredom * 0.3, plan: snackRoutine()))  // R3-4 (B): merienda mas
+        candidates.append((weight: 4.0, plan: sneezeRoutine()))  // R3-4 (B): estornuda mas
+        candidates.append((weight: 3.5, plan: hiccupRoutine()))  // R3-4 (B): hipo mas
+        candidates.append((weight: 3.5, plan: shiverRoutine()))  // R3-4 (B): tirita mas
+        if drives.energy < 48 { candidates.append((weight: 11, plan: calmRoutine())) }  // R3-4 (B): medita antes
+        if drives.playfulness > 50 { candidates.append((weight: 9, plan: horseRoutine(stageWidth: perception.stageWidth))) }  // R3-4 (B): cabalga mas
         if perception.aliveObjectKinds.filter({ $0.isCreature }).count >= 2 {
-            candidates.append((weight: 13, plan: conductRoutine()))
+            candidates.append((weight: 16, plan: conductRoutine()))  // R3-4 (B): dirige mas la orquesta
         }
-        if perception.timeSinceLastInteraction > 45 {
-            candidates.append((weight: 15, plan: begRoutine()))
+        if perception.timeSinceLastInteraction > 30 {  // R3-2 (B): suplica atencion antes
+            candidates.append((weight: 18, plan: begRoutine()))  // R3-4 (B): suplica mas fuerte
         }
-        if drives.boredom > 55 { candidates.append((weight: 26, plan: boredRoutine())) }
-        if drives.playfulness > 58 || drives.sociability > 62 { candidates.append((weight: 22, plan: happyRoutine())) }
-        if drives.anger > 48 { candidates.append((weight: 20 + drives.anger * 0.3, plan: moodyRoutine())) }
+        if drives.boredom > 45 { candidates.append((weight: 26, plan: boredRoutine())) }  // R3-4 (B): la rutina de aburrimiento llega antes
+        if drives.playfulness > 52 || drives.sociability > 56 { candidates.append((weight: 22, plan: happyRoutine())) }  // R3-4 (B): la fiesta llega antes
+        if drives.anger > 42 { candidates.append((weight: 20 + drives.anger * 0.3, plan: moodyRoutine())) }  // R3-4 (B): se enfada en rutina antes
 
         // Poderes de The Second Coming: travesura / enfado / memoria -> despertar
         let powerWeight = drives.mischief * 0.45 + drives.anger * 0.6 + Double(memory.annoyances) * 7
-        if powerWeight > 24 {
+        if powerWeight > 19 {  // R3-4 (B): presume de poderes antes
             candidates.append((weight: powerWeight, plan: Bool.random() ? trainSecondComing() : showOffPowers()))
         }
 
