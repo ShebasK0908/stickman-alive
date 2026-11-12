@@ -56,6 +56,14 @@ struct StickmanCanvasView: View {
         /// «no se parece». Ø 58 lo lleva a ~35 % estricto, el centro
         /// del rango. (La ronda 2 lo dejó en 39 buscando el 23-26 %
         /// del primer plano; el .nodes y la foto definitiva mandan.)
+        /// R4 (2026-11-12): VERIFICADO con la formula estricta de la
+        /// fusion — % = (Ø×0,8) / ((56 + 42×1,06 + 23×1,28)×0,8 +
+        /// Ø×0,8/2 + anillo 6,8/2 + trazo 8/2) = 46,4 / 134,6 =
+        /// 34,5 %: dentro del objetivo 34-35 % y del rango 33-37 %.
+        /// Los anclajes que dependen de la cabeza NO usan esta
+        /// constante: laser y fuego salen de las articulaciones
+        /// resueltas (jointPoints: jp.head y la mano delantera), asi
+        /// que quedan alineados con cualquier Ø.
         static let headDiameter: CGFloat = 58
         /// Trazo del anillo de la cabeza, en unidades de pose: 8,5
         /// (~16 % del Ø; el .nodes da ~14 %, el plano de foto ~23 %:
