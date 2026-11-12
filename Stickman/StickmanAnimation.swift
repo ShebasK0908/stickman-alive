@@ -225,55 +225,55 @@ enum AnimationLibrary {
     // se queda un pelo detras (0).
     static let walk = AnimationClip(name: "caminar", duration: 0.80, loops: true, keyframes: [
         K(0.0, P { p in // CONTACTO izquierdo: talon delante, peso cayendo
-            p.neckOff = CGPoint(x: 4, y: -42); p.headOff = CGPoint(x: 1, y: -22); p.hipHeight = 54; p.hipDX = 0
-            p.footL = CGPoint(x: 20, y: 54); p.kneeL = CGPoint(x: 13, y: 27)
-            p.footR = CGPoint(x: -17, y: 50); p.kneeR = CGPoint(x: -7, y: 22)
-            p.handL = CGPoint(x: -17, y: 41); p.elbowL = CGPoint(x: -18, y: 19)
-            p.handR = CGPoint(x: 31, y: 41); p.elbowR = CGPoint(x: 18, y: 19)
+            p.neckOff = CGPoint(x: 5, y: -42); p.headOff = CGPoint(x: 1, y: -22); p.hipHeight = 54; p.hipDX = 0 // R3-7: mas volcado (4->5)
+            p.footL = CGPoint(x: 24, y: 54); p.kneeL = CGPoint(x: 15, y: 27) // R3-7: zancada 20->24
+            p.footR = CGPoint(x: -20, y: 50); p.kneeR = CGPoint(x: -8, y: 22) // R3-7: apoyo atras -17->-20
+            p.handL = CGPoint(x: -20, y: 41); p.elbowL = CGPoint(x: -21, y: 19) // R3-7: balanceo -17->-20
+            p.handR = CGPoint(x: 37, y: 41); p.elbowR = CGPoint(x: 21, y: 19) // R3-7: balanceo 31->37
         }, .easeIn),
-        K(0.07, P { p in // LAG: las piernas ya salen del contacto; los brazos TODAVIA no (siguen en el extremo)
-            p.neckOff = CGPoint(x: 4, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 52.5; p.hipDX = 1
-            p.footL = CGPoint(x: 12, y: 52); p.kneeL = CGPoint(x: 10, y: 28)
-            p.footR = CGPoint(x: -13, y: 45); p.kneeR = CGPoint(x: -13, y: 18)
-            p.handL = CGPoint(x: -18, y: 41); p.handR = CGPoint(x: 30, y: 41)
+        K(0.06, P { p in // LAG: las piernas ya salen del contacto; los brazos TODAVIA no (siguen en el extremo)
+            p.neckOff = CGPoint(x: 4, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 52.5; p.hipDX = 1 // R3-7: lag mas corto (0.07->0.06)
+            p.footL = CGPoint(x: 14, y: 52); p.kneeL = CGPoint(x: 10, y: 28)
+            p.footR = CGPoint(x: -15, y: 45); p.kneeR = CGPoint(x: -13, y: 18)
+            p.handL = CGPoint(x: -21, y: 41); p.handR = CGPoint(x: 36, y: 41) // R3-7: brazos aguantan mas lejos (-18->-21, 30->36)
         }, .easeOut),
         K(0.20, P { p in // PASO: punto bajo, el cuerpo pasa sobre el apoyo; brazos a mitad de balanceo
-            p.neckOff = CGPoint(x: 3, y: -41); p.headOff = CGPoint(x: 4, y: -23.5); p.hipHeight = 51.5; p.hipDX = 2
-            p.footL = CGPoint(x: 2, y: 51.5); p.kneeL = CGPoint(x: 7, y: 29)
-            p.footR = CGPoint(x: -7, y: 39); p.kneeR = CGPoint(x: -19, y: 14)
-            p.handL = CGPoint(x: -24, y: 42); p.handR = CGPoint(x: 20, y: 42)
+            p.neckOff = CGPoint(x: 4, y: -41); p.headOff = CGPoint(x: 4, y: -23.5); p.hipHeight = 51.0; p.hipDX = 2.5 // R3-7: pasa mas bajo (51.5->51.0) y mas encima (2->2.5)
+            p.footL = CGPoint(x: 2, y: 51.0); p.kneeL = CGPoint(x: 7, y: 29)
+            p.footR = CGPoint(x: -7, y: 36); p.kneeR = CGPoint(x: -22, y: 14) // R3-7: pie libre mas alto (39->36)
+            p.handL = CGPoint(x: -29, y: 42); p.handR = CGPoint(x: 24, y: 42) // R3-7: balanceo -24->-29, 20->24
         }, .easeInOut),
-        K(0.27, P { p in // LAG espejo: la pierna libre ya busca el suelo; los brazos llegan tarde otra vez
-            p.neckOff = CGPoint(x: 3, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 53; p.hipDX = 1
-            p.footL = CGPoint(x: -10, y: 45); p.kneeL = CGPoint(x: -14, y: 18)
-            p.footR = CGPoint(x: 13, y: 52); p.kneeR = CGPoint(x: 10, y: 28)
-            p.handL = CGPoint(x: -28, y: 41); p.handR = CGPoint(x: 15, y: 41)
-        }, .easeIn), // cae al contacto contrario
+        K(0.25, P { p in // LAG espejo: la pierna libre ya busca el suelo; los brazos llegan tarde otra vez
+            p.neckOff = CGPoint(x: 3, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 53; p.hipDX = 1 // R3-7: cae antes (0.27->0.25)
+            p.footL = CGPoint(x: -12, y: 45); p.kneeL = CGPoint(x: -14, y: 18)
+            p.footR = CGPoint(x: 15, y: 52); p.kneeR = CGPoint(x: 10, y: 28)
+            p.handL = CGPoint(x: -33, y: 41); p.handR = CGPoint(x: 18, y: 41) // R3-7: brazos -28->-33, 15->18
+        }, .snappy), // R3-7: cae al contacto contrario, seco
         K(0.40, P { p in // CONTACTO derecho (asimetria leve: zancada un pelo mas larga)
-            p.neckOff = CGPoint(x: 4, y: -42); p.headOff = CGPoint(x: 1, y: -22); p.hipHeight = 54; p.hipDX = 0
-            p.footL = CGPoint(x: -16, y: 50); p.kneeL = CGPoint(x: -7, y: 22)
-            p.footR = CGPoint(x: 21, y: 54); p.kneeR = CGPoint(x: 14, y: 27)
-            p.handL = CGPoint(x: 32, y: 41); p.elbowL = CGPoint(x: 18, y: 19)
-            p.handR = CGPoint(x: -16, y: 41); p.elbowR = CGPoint(x: -18, y: 19)
+            p.neckOff = CGPoint(x: 5, y: -42); p.headOff = CGPoint(x: 1, y: -22); p.hipHeight = 54; p.hipDX = 0 // R3-7: mas volcado (4->5)
+            p.footL = CGPoint(x: -19, y: 50); p.kneeL = CGPoint(x: -8, y: 22) // R3-7: apoyo atras -16->-19
+            p.footR = CGPoint(x: 25, y: 54); p.kneeR = CGPoint(x: 16, y: 27) // R3-7: zancada 21->25
+            p.handL = CGPoint(x: 38, y: 41); p.elbowL = CGPoint(x: 21, y: 19) // R3-7: balanceo 32->38
+            p.handR = CGPoint(x: -19, y: 41); p.elbowR = CGPoint(x: -21, y: 19) // R3-7: balanceo -16->-19
         }, .easeIn),
-        K(0.47, P { p in // LAG derecho
-            p.neckOff = CGPoint(x: 4, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 52.5; p.hipDX = 1
-            p.footL = CGPoint(x: -13, y: 45); p.kneeL = CGPoint(x: -13, y: 18)
-            p.footR = CGPoint(x: 12, y: 52); p.kneeR = CGPoint(x: 10, y: 28)
-            p.handL = CGPoint(x: 31, y: 41); p.handR = CGPoint(x: -17, y: 41)
+        K(0.46, P { p in // LAG derecho
+            p.neckOff = CGPoint(x: 4, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 52.5; p.hipDX = 1 // R3-7: lag mas corto (0.47->0.46)
+            p.footL = CGPoint(x: -15, y: 45); p.kneeL = CGPoint(x: -13, y: 18)
+            p.footR = CGPoint(x: 14, y: 52); p.kneeR = CGPoint(x: 10, y: 28)
+            p.handL = CGPoint(x: 37, y: 41); p.handR = CGPoint(x: -20, y: 41) // R3-7: brazos aguantan mas lejos (31->37, -17->-20)
         }, .easeOut),
         K(0.60, P { p in // PASO contrario
-            p.neckOff = CGPoint(x: 3, y: -41); p.headOff = CGPoint(x: 4, y: -23.5); p.hipHeight = 51.5; p.hipDX = 2
-            p.footL = CGPoint(x: -8, y: 39); p.kneeL = CGPoint(x: -19, y: 14)
-            p.footR = CGPoint(x: 3, y: 51.5); p.kneeR = CGPoint(x: 8, y: 29)
-            p.handL = CGPoint(x: 21, y: 42); p.handR = CGPoint(x: -23, y: 42)
+            p.neckOff = CGPoint(x: 4, y: -41); p.headOff = CGPoint(x: 4, y: -23.5); p.hipHeight = 51.0; p.hipDX = 2.5 // R3-7: pasa mas bajo (51.5->51.0) y mas encima (2->2.5)
+            p.footL = CGPoint(x: -8, y: 36); p.kneeL = CGPoint(x: -22, y: 14) // R3-7: pie libre mas alto (39->36)
+            p.footR = CGPoint(x: 3, y: 51.0); p.kneeR = CGPoint(x: 8, y: 29)
+            p.handL = CGPoint(x: 25, y: 42); p.handR = CGPoint(x: -28, y: 42) // R3-7: balanceo 21->25, -23->-28
         }, .easeInOut),
-        K(0.67, P { p in // LAG final: prepara el cierre del ciclo en el contacto inicial
-            p.neckOff = CGPoint(x: 3, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 53; p.hipDX = 1
-            p.footL = CGPoint(x: 14, y: 52); p.kneeL = CGPoint(x: 10, y: 28)
-            p.footR = CGPoint(x: -10, y: 45); p.kneeR = CGPoint(x: -14, y: 18)
-            p.handL = CGPoint(x: 16, y: 41); p.handR = CGPoint(x: -27, y: 41)
-        }, .easeIn)
+        K(0.65, P { p in // LAG final: prepara el cierre del ciclo en el contacto inicial
+            p.neckOff = CGPoint(x: 3, y: -41.5); p.headOff = CGPoint(x: 2, y: -22.5); p.hipHeight = 53; p.hipDX = 1 // R3-7: cae antes (0.67->0.65)
+            p.footL = CGPoint(x: 16, y: 52); p.kneeL = CGPoint(x: 10, y: 28)
+            p.footR = CGPoint(x: -12, y: 45); p.kneeR = CGPoint(x: -14, y: 18)
+            p.handL = CGPoint(x: 19, y: 41); p.handR = CGPoint(x: -32, y: 41) // R3-7: brazos 16->19, -27->-32
+        }, .snappy) // R3-7: cae al contacto inicial, seco
     ])
 
     // -- LOCOMOCION v6: correr — LA CARRERA DE THE CHOSEN ONE (AvA 2) --
@@ -295,58 +295,58 @@ enum AnimationLibrary {
     // el cuello absorbe el boteo del torso, como en el video.
     static let run = AnimationClip(name: "correr", duration: 0.60, loops: true, keyframes: [
         K(0.0, P { p in // CONTACTO izquierdo: el pie cae LEJOS, delante del cuerpo volcado
-            p.neckOff = CGPoint(x: 18, y: -38); p.headOff = CGPoint(x: 8, y: -20); p.hipHeight = 51
-            p.footL = CGPoint(x: 36, y: 51); p.kneeL = CGPoint(x: 22, y: 24)
-            p.footR = CGPoint(x: -30, y: 30); p.kneeR = CGPoint(x: -24, y: 10) // trasera acaba de despegar, talon al gluteo
-            p.handL = CGPoint(x: -26, y: 16); p.elbowL = CGPoint(x: -10, y: 20) // brazo atras, codo cerrado
-            p.handR = CGPoint(x: 32, y: 4); p.elbowR = CGPoint(x: 24, y: 18)   // puño contrario delante, cruzando
+            p.neckOff = CGPoint(x: 20, y: -38); p.headOff = CGPoint(x: 8, y: -20); p.hipHeight = 51 // R3-7: mas volcado (18->20)
+            p.footL = CGPoint(x: 43, y: 51); p.kneeL = CGPoint(x: 26, y: 24) // R3-7: zancada 36->43
+            p.footR = CGPoint(x: -36, y: 28); p.kneeR = CGPoint(x: -28, y: 10) // trasera acaba de despegar, talon al gluteo // R3-7: -30->-36, mas recogida (30->28)
+            p.handL = CGPoint(x: -31, y: 16); p.elbowL = CGPoint(x: -12, y: 20) // brazo atras, codo cerrado // R3-7: -26->-31
+            p.handR = CGPoint(x: 38, y: 4); p.elbowR = CGPoint(x: 28, y: 18)   // puño contrario delante, cruzando // R3-7: 32->38
         }, .easeIn), // el peso sigue hundiendose hacia la absorcion
-        K(0.06, P { p in // ABSORCION: compresion maxima, todo el peso en una pierna
-            p.neckOff = CGPoint(x: 19, y: -37); p.headOff = CGPoint(x: 8, y: -19); p.hipHeight = 46; p.squash = 0.91
-            p.footL = CGPoint(x: 25, y: 46); p.kneeL = CGPoint(x: 23, y: 18)
-            p.footR = CGPoint(x: -13, y: 29); p.kneeR = CGPoint(x: -23, y: 9) // la libre ya barre hacia delante por abajo
-            p.handL = CGPoint(x: -18, y: 22); p.handR = CGPoint(x: 24, y: 10)
-        }, .easeOut), // explota fuera del fondo: extension violenta
-        K(0.13, P { p in // IMPULSO (toe-off): pierna de apoyo estirada atras, rodilla libre clavando arriba
-            p.neckOff = CGPoint(x: 18, y: -38); p.headOff = CGPoint(x: 7, y: -20); p.hipHeight = 54; p.squash = 1.06
-            p.footL = CGPoint(x: -11, y: 48); p.kneeL = CGPoint(x: 2, y: 23)
-            p.footR = CGPoint(x: 15, y: 25); p.kneeR = CGPoint(x: 27, y: 9)
-            p.handL = CGPoint(x: 2, y: 10); p.elbowL = CGPoint(x: -14, y: 16)
-            p.handR = CGPoint(x: 8, y: 20); p.elbowR = CGPoint(x: 18, y: 14)
+        K(0.05, P { p in // ABSORCION: compresion maxima, todo el peso en una pierna
+            p.neckOff = CGPoint(x: 19, y: -37); p.headOff = CGPoint(x: 8, y: -19); p.hipHeight = 45; p.squash = 0.89 // R3-7: mas honda (46->45, 0.91->0.89), llega antes (0.06->0.05)
+            p.footL = CGPoint(x: 29, y: 45); p.kneeL = CGPoint(x: 23, y: 18) // R3-7: 25->29
+            p.footR = CGPoint(x: -15, y: 29); p.kneeR = CGPoint(x: -23, y: 9) // la libre ya barre hacia delante por abajo
+            p.handL = CGPoint(x: -21, y: 22); p.handR = CGPoint(x: 28, y: 10) // R3-7: -18->-21, 24->28
+        }, .snappy), // R3-7: explota fuera del fondo, violento
+        K(0.12, P { p in // IMPULSO (toe-off): pierna de apoyo estirada atras, rodilla libre clavando arriba
+            p.neckOff = CGPoint(x: 18, y: -38); p.headOff = CGPoint(x: 7, y: -20); p.hipHeight = 54.5; p.squash = 1.07 // R3-7: mas alto (54->54.5, 1.06->1.07), llega antes (0.13->0.12)
+            p.footL = CGPoint(x: -13, y: 48); p.kneeL = CGPoint(x: 2, y: 23)
+            p.footR = CGPoint(x: 15, y: 23); p.kneeR = CGPoint(x: 32, y: 9) // R3-7: rodilla clava mas arriba (27->32, 25->23)
+            p.handL = CGPoint(x: 3, y: 10); p.elbowL = CGPoint(x: -14, y: 16)
+            p.handR = CGPoint(x: 10, y: 20); p.elbowR = CGPoint(x: 18, y: 14)
         }, .easeOut), // sigue subiendo al vuelo
-        K(0.21, P { p in // VUELO: el cuerpo entero en el aire, zancada abierta al maximo
-            p.neckOff = CGPoint(x: 17, y: -39); p.headOff = CGPoint(x: 7, y: -21); p.hipHeight = 58; p.squash = 1.02
-            p.footL = CGPoint(x: -35, y: 37); p.kneeL = CGPoint(x: -21, y: 15) // trasera estirada en el aire
-            p.footR = CGPoint(x: 31, y: 28); p.kneeR = CGPoint(x: 27, y: 13)   // delantera buscando el suelo, tibia colgando
-            p.handL = CGPoint(x: 30, y: 2); p.elbowL = CGPoint(x: 23, y: 18)   // el bombeo cruza: ahora el puño izquierdo delante
-            p.handR = CGPoint(x: -28, y: 14); p.elbowR = CGPoint(x: -9, y: 20)
+        K(0.20, P { p in // VUELO: el cuerpo entero en el aire, zancada abierta al maximo
+            p.neckOff = CGPoint(x: 17, y: -39); p.headOff = CGPoint(x: 7, y: -21); p.hipHeight = 59.5; p.squash = 1.025 // R3-7: mas alto (58->59.5), llega antes (0.21->0.20)
+            p.footL = CGPoint(x: -42, y: 37); p.kneeL = CGPoint(x: -25, y: 15) // trasera estirada en el aire // R3-7: -35->-42
+            p.footR = CGPoint(x: 37, y: 28); p.kneeR = CGPoint(x: 32, y: 13)   // delantera buscando el suelo, tibia colgando // R3-7: 31->37
+            p.handL = CGPoint(x: 36, y: 2); p.elbowL = CGPoint(x: 27, y: 18)   // el bombeo cruza: ahora el puño izquierdo delante // R3-7: 30->36
+            p.handR = CGPoint(x: -33, y: 14); p.elbowR = CGPoint(x: -11, y: 20) // R3-7: -28->-33
         }, .powerIn), // la gravedad manda: la caida al contacto ACELERA
         K(0.30, P { p in // CONTACTO derecho (espejo con asimetria de pose, no de tiempo)
-            p.neckOff = CGPoint(x: 18, y: -38); p.headOff = CGPoint(x: 8, y: -20); p.hipHeight = 51
-            p.footL = CGPoint(x: -29, y: 31); p.kneeL = CGPoint(x: -23, y: 10)
-            p.footR = CGPoint(x: 37, y: 51); p.kneeR = CGPoint(x: 23, y: 24)
-            p.handL = CGPoint(x: 33, y: 5); p.elbowL = CGPoint(x: 24, y: 18)
-            p.handR = CGPoint(x: -25, y: 17); p.elbowR = CGPoint(x: -10, y: 20)
+            p.neckOff = CGPoint(x: 20, y: -38); p.headOff = CGPoint(x: 8, y: -20); p.hipHeight = 51 // R3-7: mas volcado (18->20)
+            p.footL = CGPoint(x: -35, y: 29); p.kneeL = CGPoint(x: -27, y: 10) // R3-7: -29->-35
+            p.footR = CGPoint(x: 44, y: 51); p.kneeR = CGPoint(x: 27, y: 24) // R3-7: zancada 37->44
+            p.handL = CGPoint(x: 39, y: 5); p.elbowL = CGPoint(x: 28, y: 18) // R3-7: 33->39
+            p.handR = CGPoint(x: -30, y: 17); p.elbowR = CGPoint(x: -12, y: 20) // R3-7: -25->-30
         }, .easeIn),
-        K(0.36, P { p in // ABSORCION derecha
-            p.neckOff = CGPoint(x: 19, y: -37); p.headOff = CGPoint(x: 8, y: -19); p.hipHeight = 46; p.squash = 0.91
-            p.footL = CGPoint(x: -12, y: 29); p.kneeL = CGPoint(x: -22, y: 9)
-            p.footR = CGPoint(x: 26, y: 46); p.kneeR = CGPoint(x: 24, y: 18)
-            p.handL = CGPoint(x: 25, y: 11); p.handR = CGPoint(x: -17, y: 23)
+        K(0.35, P { p in // ABSORCION derecha
+            p.neckOff = CGPoint(x: 19, y: -37); p.headOff = CGPoint(x: 8, y: -19); p.hipHeight = 45; p.squash = 0.89 // R3-7: mas honda (46->45, 0.91->0.89), llega antes (0.36->0.35)
+            p.footL = CGPoint(x: -14, y: 29); p.kneeL = CGPoint(x: -22, y: 9)
+            p.footR = CGPoint(x: 30, y: 45); p.kneeR = CGPoint(x: 24, y: 18) // R3-7: 26->30
+            p.handL = CGPoint(x: 29, y: 11); p.handR = CGPoint(x: -20, y: 23) // R3-7: 25->29, -17->-20
+        }, .snappy), // R3-7: explota fuera del fondo, violento
+        K(0.42, P { p in // IMPULSO derecho
+            p.neckOff = CGPoint(x: 18, y: -38); p.headOff = CGPoint(x: 7, y: -20); p.hipHeight = 54.5; p.squash = 1.07 // R3-7: mas alto (54->54.5, 1.06->1.07), llega antes (0.43->0.42)
+            p.footL = CGPoint(x: 16, y: 23); p.kneeL = CGPoint(x: 33, y: 9) // R3-7: rodilla clava mas arriba (28->33, 25->23)
+            p.footR = CGPoint(x: -12, y: 48); p.kneeR = CGPoint(x: 3, y: 23)
+            p.handL = CGPoint(x: 11, y: 21); p.elbowL = CGPoint(x: 18, y: 14)
+            p.handR = CGPoint(x: 4, y: 11); p.elbowR = CGPoint(x: -14, y: 16)
         }, .easeOut),
-        K(0.43, P { p in // IMPULSO derecho
-            p.neckOff = CGPoint(x: 18, y: -38); p.headOff = CGPoint(x: 7, y: -20); p.hipHeight = 54; p.squash = 1.06
-            p.footL = CGPoint(x: 16, y: 25); p.kneeL = CGPoint(x: 28, y: 9)
-            p.footR = CGPoint(x: -10, y: 48); p.kneeR = CGPoint(x: 3, y: 23)
-            p.handL = CGPoint(x: 9, y: 21); p.elbowL = CGPoint(x: 18, y: 14)
-            p.handR = CGPoint(x: 3, y: 11); p.elbowR = CGPoint(x: -14, y: 16)
-        }, .easeOut),
-        K(0.51, P { p in // VUELO derecho -> cierra cayendo al contacto inicial
-            p.neckOff = CGPoint(x: 17, y: -39); p.headOff = CGPoint(x: 7, y: -21); p.hipHeight = 58; p.squash = 1.02
-            p.footL = CGPoint(x: 32, y: 28); p.kneeL = CGPoint(x: 28, y: 13)
-            p.footR = CGPoint(x: -34, y: 37); p.kneeR = CGPoint(x: -20, y: 15)
-            p.handL = CGPoint(x: -27, y: 15); p.elbowL = CGPoint(x: -9, y: 20)
-            p.handR = CGPoint(x: 31, y: 3); p.elbowR = CGPoint(x: 23, y: 18)
+        K(0.50, P { p in // VUELO derecho -> cierra cayendo al contacto inicial
+            p.neckOff = CGPoint(x: 17, y: -39); p.headOff = CGPoint(x: 7, y: -21); p.hipHeight = 59.5; p.squash = 1.025 // R3-7: mas alto (58->59.5), llega antes (0.51->0.50)
+            p.footL = CGPoint(x: 38, y: 28); p.kneeL = CGPoint(x: 33, y: 13) // R3-7: 32->38
+            p.footR = CGPoint(x: -41, y: 37); p.kneeR = CGPoint(x: -24, y: 15) // R3-7: -34->-41
+            p.handL = CGPoint(x: -32, y: 15); p.elbowL = CGPoint(x: -11, y: 20) // R3-7: -27->-32
+            p.handR = CGPoint(x: 37, y: 3); p.elbowR = CGPoint(x: 27, y: 18) // R3-7: 31->37
         }, .powerIn)
     ])
 
@@ -381,64 +381,67 @@ enum AnimationLibrary {
     // Anticipacion MAS larga y profunda que en la v2/v3 (en los videos
     // se agacha "de verdad" antes de saltar), stretch mayor al despegar
     // y aterrizaje con squash que se AGUANTA y settle con overshoot.
+    // Ronda 3-5 (A, saltos y caidas): anticipacion mas corta y profunda,
+    // stretch mas alto, caida que acelera (.powerIn), squash de impacto
+    // mas hondo con hold mas largo y overshoot con follow-through.
     static let jumpCrouch = AnimationClip(name: "salto-agacharse", duration: 0.26, loops: false, keyframes: [
-        K(0.0, SkeletonPose.standing, .easeIn),
-        K(0.16, P { p in
-            p.hipHeight = 42; p.squash = 0.88
-            p.kneeL = CGPoint(x: -15, y: 19); p.footL = CGPoint(x: -14, y: 42)
-            p.kneeR = CGPoint(x: 15, y: 19); p.footR = CGPoint(x: 14, y: 42)
-            p.handL = CGPoint(x: -20, y: 34); p.handR = CGPoint(x: 20, y: 34)
+        K(0.0, SkeletonPose.standing, .snappy), // R3-5: se hunde seco, sin tanteo
+        K(0.13, P { p in // R3-5: anticipacion llega antes (0.16->0.13) y mas honda
+            p.hipHeight = 40; p.squash = 0.86
+            p.kneeL = CGPoint(x: -17, y: 18); p.footL = CGPoint(x: -16, y: 40)
+            p.kneeR = CGPoint(x: 17, y: 18); p.footR = CGPoint(x: 16, y: 40)
+            p.handL = CGPoint(x: -23, y: 33); p.handR = CGPoint(x: 23, y: 33)
         }, .easeIn), // sigue bajando: anticipacion en dos tiempos
         K(0.26, P { p in
-            p.hipHeight = 35; p.squash = 0.78 // ANTICIPACION profunda, cargada
-            p.neckOff = CGPoint(x: 5, y: -34); p.headOff = CGPoint(x: 3, y: -19)
-            p.kneeL = CGPoint(x: -18, y: 15); p.footL = CGPoint(x: -16, y: 35)
-            p.kneeR = CGPoint(x: 18, y: 15); p.footR = CGPoint(x: 16, y: 35)
-            p.handL = CGPoint(x: -27, y: 26); p.handR = CGPoint(x: 27, y: 26) // brazos muy atras, listos para lanzar
+            p.hipHeight = 32; p.squash = 0.74 // R3-5: ANTICIPACION profunda, cargada (35->32, 0.78->0.74)
+            p.neckOff = CGPoint(x: 5, y: -33); p.headOff = CGPoint(x: 3, y: -18)
+            p.kneeL = CGPoint(x: -21, y: 15); p.footL = CGPoint(x: -19, y: 33)
+            p.kneeR = CGPoint(x: 21, y: 15); p.footR = CGPoint(x: 19, y: 33)
+            p.handL = CGPoint(x: -32, y: 24); p.handR = CGPoint(x: 32, y: 24) // R3-5: brazos muy atras, listos para lanzar (27->32)
         })
     ])
     static let jumpStretch = AnimationClip(name: "salto-estirar", duration: 0.32, loops: false, keyframes: [
         K(0.0, P { p in
-            p.hipHeight = 59; p.squash = 1.17 // STRETCH maximo al despegar
-            p.footL = CGPoint(x: -7, y: 44); p.kneeL = CGPoint(x: -5, y: 23)
-            p.footR = CGPoint(x: 8, y: 46); p.kneeR = CGPoint(x: 6, y: 24)
-            p.handL = CGPoint(x: -24, y: -12); p.handR = CGPoint(x: 24, y: -12) // los brazos se lanzan arriba (follow-through)
-        }, .easeOut),
+            p.hipHeight = 62; p.squash = 1.21 // R3-5: STRETCH maximo al despegar (59->62, 1.17->1.21)
+            p.footL = CGPoint(x: -7, y: 41); p.kneeL = CGPoint(x: -5, y: 23)
+            p.footR = CGPoint(x: 8, y: 43); p.kneeR = CGPoint(x: 6, y: 24)
+            p.handL = CGPoint(x: -28, y: -15); p.handR = CGPoint(x: 28, y: -15) // R3-5: los brazos se lanzan arriba (follow-through, -12->-15)
+        }, .snappy), // R3-5: el cuerpo se clava en el estiron y luego flota
         K(0.32, P { p in
-            p.squash = 1.03
-            p.footL = CGPoint(x: -14, y: 36); p.kneeL = CGPoint(x: -13, y: 17)
-            p.footR = CGPoint(x: 15, y: 38); p.kneeR = CGPoint(x: 13, y: 18)
-            p.handL = CGPoint(x: -28, y: 4); p.handR = CGPoint(x: 28, y: 4) // y quedan flotando un instante
+            p.squash = 1.05
+            p.footL = CGPoint(x: -17, y: 33); p.kneeL = CGPoint(x: -15, y: 17)
+            p.footR = CGPoint(x: 18, y: 35); p.kneeR = CGPoint(x: 15, y: 18)
+            p.handL = CGPoint(x: -33, y: 1); p.handR = CGPoint(x: 33, y: 1) // R3-5: y quedan flotando un instante, pies mas recogidos
         })
     ])
     static let fallPose = AnimationClip(name: "caida", duration: 0.55, loops: false, keyframes: [
         K(0.0, P { p in
-            p.footL = CGPoint(x: -21, y: 32); p.kneeL = CGPoint(x: -16, y: 15) // piernas abiertas buscando suelo
-            p.footR = CGPoint(x: 22, y: 34); p.kneeR = CGPoint(x: 17, y: 16)
-            p.handL = CGPoint(x: -29, y: -6); p.handR = CGPoint(x: 29, y: -6) // brazos arriba, en panico leve
-        }, .easeInOut),
+            p.footL = CGPoint(x: -25, y: 32); p.kneeL = CGPoint(x: -19, y: 15) // R3-5: piernas abiertas buscando suelo (21->25)
+            p.footR = CGPoint(x: 26, y: 34); p.kneeR = CGPoint(x: 20, y: 16)
+            p.handL = CGPoint(x: -34, y: -8); p.handR = CGPoint(x: 34, y: -8) // R3-5: brazos arriba, en panico leve (29->34)
+        }, .powerIn), // R3-5: la caida ACELERA, no se desliza
         K(0.3, P { p in
-            p.footL = CGPoint(x: -24, y: 37); p.footR = CGPoint(x: 25, y: 39)
-            p.handL = CGPoint(x: -31, y: 2); p.handR = CGPoint(x: 27, y: 6) // bracea asimetrico preparando el impacto
-            p.neckOff = CGPoint(x: 3, y: -40)
+            p.footL = CGPoint(x: -28, y: 37); p.footR = CGPoint(x: 29, y: 39)
+            p.handL = CGPoint(x: -36, y: 2); p.handR = CGPoint(x: 31, y: 6) // R3-5: bracea asimetrico preparando el impacto
+            p.neckOff = CGPoint(x: 4, y: -40)
         }, .easeInOut),
         K(0.55, P { p in
-            p.footL = CGPoint(x: -23, y: 39); p.footR = CGPoint(x: 24, y: 41)
-            p.handL = CGPoint(x: -28, y: 8); p.handR = CGPoint(x: 30, y: 8)
+            p.footL = CGPoint(x: -27, y: 39); p.footR = CGPoint(x: 28, y: 41)
+            p.handL = CGPoint(x: -33, y: 8); p.handR = CGPoint(x: 35, y: 8)
         })
     ])
     static let landing = AnimationClip(name: "aterrizar", duration: 0.55, loops: false, keyframes: [
         K(0.0, P { p in
-            p.hipHeight = 36; p.squash = 0.74 // SQUASH de impacto, mas profundo
-            p.kneeL = CGPoint(x: -19, y: 14); p.footL = CGPoint(x: -20, y: 36)
-            p.kneeR = CGPoint(x: 19, y: 14); p.footR = CGPoint(x: 20, y: 36)
-            p.handL = CGPoint(x: -28, y: 30); p.handR = CGPoint(x: 28, y: 30) // manos casi al suelo
-            p.neckOff = CGPoint(x: 4, y: -36)
-        }, .easeOut),
-        K(0.14, P { p in p.hipHeight = 38; p.squash = 0.79 }, .easeInOut), // AGUANTA el impacto (pose larga)
-        K(0.34, P { p in p.hipHeight = 53; p.squash = 0.97 }, .easeOut),   // recupera...
-        K(0.44, P { p in p.hipHeight = 57; p.squash = 1.03 }, .easeInOut), // ...con overshoot
-        K(0.5, P { p in p.hipHeight = 55; p.squash = 0.99 }, .easeOut),    // v6: micro-rebote (el cuerpo "resuena" una vez mas, mitad de amplitud)
+            p.hipHeight = 33; p.squash = 0.70 // R3-5: SQUASH de impacto, mas profundo (36->33, 0.74->0.70)
+            p.kneeL = CGPoint(x: -22, y: 14); p.footL = CGPoint(x: -23, y: 33)
+            p.kneeR = CGPoint(x: 22, y: 14); p.footR = CGPoint(x: 23, y: 33)
+            p.handL = CGPoint(x: -33, y: 33); p.handR = CGPoint(x: 33, y: 33) // R3-5: manos casi al suelo (28->33)
+            p.neckOff = CGPoint(x: 5, y: -34)
+        }, .easeIn), // R3-5: la pose de impacto queda CLAVADA y suelta tarde
+        K(0.17, P { p in p.hipHeight = 37; p.squash = 0.77 }, .easeInOut), // R3-5: AGUANTA el impacto (pose larga: hold 0.14->0.17 s)
+        K(0.34, P { p in p.hipHeight = 53; p.squash = 0.98 }, .backOut),   // R3-5: recupera con un latigazo de asentamiento
+        K(0.44, P { p in p.hipHeight = 58; p.squash = 1.04 }, .easeInOut), // R3-5: ...con overshoot mas alto (57->58, 1.03->1.04)
+        K(0.5, P { p in p.hipHeight = 54; p.squash = 0.98 }, .easeOut),    // v6: micro-rebote (el cuerpo "resuena" una vez mas, mitad de amplitud)
         K(0.55, SkeletonPose.standing, .softLanding)                        // y settle suave
     ])
     static let roll = AnimationClip(name: "rodar", duration: 0.66, loops: false, keyframes: [
@@ -468,6 +471,8 @@ enum AnimationLibrary {
     // propia recogida del primero, como en los intercambios de AvA 4)
     // -> cross con cadera -> patada frontal -> barrido -> guardia.
     // Entre rafagas, la guardia RESPIRA con bounce (nunca foto quieta).
+    // Ronda 3-1 (A, pelea): extremos +15-25 %, anticipaciones mas cortas,
+    // holds mas largos (.easeIn), follow-through en la salida del barrido.
     static let fightCombo = AnimationClip(name: "pelea", duration: 3.6, loops: true, keyframes: [
         K(0.0, P { p in // guardia baja y ancha, peso en los talones
             p.hipHeight = 49; p.neckOff = CGPoint(x: 6, y: -40); p.squash = 0.97
@@ -481,80 +486,80 @@ enum AnimationLibrary {
             p.footL = CGPoint(x: -20, y: 51); p.footR = CGPoint(x: 22, y: 51)
             p.handL = CGPoint(x: 16, y: 8); p.handR = CGPoint(x: 26, y: 13)
         }, .easeIn), // carga el jab: hombro atras
-        K(0.34, P { p in // ANTICIPACION jab 1: puño recogido, torso girado
-            p.hipHeight = 50; p.neckOff = CGPoint(x: 2, y: -40); p.hipDX = -2
+        K(0.31, P { p in // ANTICIPACION jab 1: puño recogido, torso girado (r3: mas atras, mas corta)
+            p.hipHeight = 50; p.neckOff = CGPoint(x: 1, y: -40); p.hipDX = -3
             p.footL = CGPoint(x: -20, y: 50); p.footR = CGPoint(x: 22, y: 50)
-            p.handR = CGPoint(x: 12, y: 14); p.elbowR = CGPoint(x: -2, y: 20)
+            p.handR = CGPoint(x: 10, y: 14); p.elbowR = CGPoint(x: -5, y: 20)
             p.handL = CGPoint(x: 18, y: 6)
-        }, .snappy), // ¡JAB 1! extension total en .07
-        K(0.41, P { p in // IMPACTO jab 1: puño clavado, torso volcado
-            p.hipHeight = 50; p.neckOff = CGPoint(x: 11, y: -39); p.hipDX = 3
-            p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 24, y: 50)
-            p.handR = CGPoint(x: 50, y: 4); p.elbowR = CGPoint(x: 28, y: 5)
+        }, .snappy), // ¡JAB 1! extension total en .07 (r3: viento 0.11, antes 0.14)
+        K(0.38, P { p in // IMPACTO jab 1: puño clavado, torso volcado (r3: +20 % extension)
+            p.hipHeight = 50; p.neckOff = CGPoint(x: 13, y: -39); p.hipDX = 4
+            p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 26, y: 50)
+            p.handR = CGPoint(x: 60, y: 3); p.elbowR = CGPoint(x: 34, y: 4)
             p.handL = CGPoint(x: 13, y: 11)
-        }, .easeInOut), // AGUANTA el impacto
+        }, .easeIn), // AGUANTA el impacto (r3: hold 0.12, antes 0.09)
         K(0.50, P { p in // el puño sigue clavado; la recogida empieza...
-            p.hipHeight = 50; p.neckOff = CGPoint(x: 10, y: -39); p.hipDX = 3
-            p.handR = CGPoint(x: 49, y: 5); p.elbowR = CGPoint(x: 28, y: 6)
+            p.hipHeight = 50; p.neckOff = CGPoint(x: 13, y: -39); p.hipDX = 4
+            p.handR = CGPoint(x: 59, y: 4); p.elbowR = CGPoint(x: 33, y: 5)
             p.handL = CGPoint(x: 14, y: 10)
-            p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 24, y: 50)
+            p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 26, y: 50)
         }, .easeIn), // ...y SIN volver a guardia carga el segundo jab (anticipacion minima)
-        K(0.58, P { p in // ANTICIPACION jab 2: solo media recogida
-            p.hipHeight = 50; p.neckOff = CGPoint(x: 6, y: -40); p.hipDX = 0
+        K(0.58, P { p in // ANTICIPACION jab 2: solo media recogida (r3: mas atras)
+            p.hipHeight = 50; p.neckOff = CGPoint(x: 5, y: -40); p.hipDX = 0
             p.footL = CGPoint(x: -20, y: 50); p.footR = CGPoint(x: 23, y: 50)
-            p.handR = CGPoint(x: 27, y: 10); p.elbowR = CGPoint(x: 8, y: 14)
+            p.handR = CGPoint(x: 24, y: 10); p.elbowR = CGPoint(x: 6, y: 14)
             p.handL = CGPoint(x: 15, y: 9)
         }, .snappy), // ¡JAB 2! mas rapido que el primero
-        K(0.64, P { p in // IMPACTO jab 2
-            p.hipHeight = 50; p.neckOff = CGPoint(x: 12, y: -39); p.hipDX = 4
-            p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 24, y: 50)
-            p.handR = CGPoint(x: 51, y: 3); p.elbowR = CGPoint(x: 29, y: 4)
+        K(0.64, P { p in // IMPACTO jab 2 (r3: +20 % extension)
+            p.hipHeight = 50; p.neckOff = CGPoint(x: 14, y: -39); p.hipDX = 5
+            p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 26, y: 50)
+            p.handR = CGPoint(x: 61, y: 2); p.elbowR = CGPoint(x: 35, y: 3)
             p.handL = CGPoint(x: 13, y: 11)
-        }, .easeInOut), // hold
-        K(0.74, P { p in p.handR = CGPoint(x: 50, y: 4); p.neckOff.x = 11; p.hipDX = 4; p.hipHeight = 50; p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 24, y: 50) }, .easeIn), // recoge girando la cadera al reves: carga el cross
-        K(0.94, P { p in // ANTICIPACION cross: puño izquierdo muy atras, squash de carga
-            p.hipHeight = 49; p.neckOff = CGPoint(x: 3, y: -40); p.hipDX = -3; p.squash = 0.96
+        }, .easeIn), // hold (r3: 0.13, antes 0.10)
+        K(0.77, P { p in p.handR = CGPoint(x: 60, y: 3); p.neckOff.x = 14; p.hipDX = 5; p.hipHeight = 50; p.footL = CGPoint(x: -21, y: 50); p.footR = CGPoint(x: 26, y: 50) }, .easeIn), // recoge girando la cadera al reves: carga el cross
+        K(0.92, P { p in // ANTICIPACION cross: puño izquierdo muy atras, squash de carga (r3: mas atras, mas corta)
+            p.hipHeight = 48; p.neckOff = CGPoint(x: 2, y: -40); p.hipDX = -4; p.squash = 0.94
             p.footL = CGPoint(x: -19, y: 49); p.footR = CGPoint(x: 23, y: 49)
-            p.handL = CGPoint(x: 8, y: 13); p.elbowL = CGPoint(x: -6, y: 19)
+            p.handL = CGPoint(x: 6, y: 13); p.elbowL = CGPoint(x: -8, y: 19)
             p.handR = CGPoint(x: 22, y: 10)
-        }, .snappy), // ¡CROSS! con toda la cadera
-        K(1.04, P { p in // IMPACTO cross
-            p.hipHeight = 49; p.neckOff = CGPoint(x: 13, y: -39); p.hipDX = 5
-            p.footL = CGPoint(x: -22, y: 49); p.footR = CGPoint(x: 25, y: 49)
-            p.handL = CGPoint(x: 48, y: 7); p.elbowL = CGPoint(x: 26, y: 8)
+        }, .snappy), // ¡CROSS! con toda la cadera (r3: viento 0.15, antes 0.20)
+        K(1.02, P { p in // IMPACTO cross (r3: +21 % extension)
+            p.hipHeight = 48; p.neckOff = CGPoint(x: 16, y: -39); p.hipDX = 6
+            p.footL = CGPoint(x: -24, y: 49); p.footR = CGPoint(x: 27, y: 49)
+            p.handL = CGPoint(x: 58, y: 6); p.elbowL = CGPoint(x: 31, y: 7)
             p.handR = CGPoint(x: 15, y: 11)
-        }, .easeInOut), // hold: el cross se aguanta mas (es el golpe fuerte de la rafaga)
-        K(1.20, P { p in p.handL = CGPoint(x: 47, y: 8); p.neckOff.x = 12; p.hipDX = 4; p.hipHeight = 49; p.footL = CGPoint(x: -22, y: 49); p.footR = CGPoint(x: 25, y: 49) }, .easeIn), // recoge a guardia...
+        }, .easeIn), // hold: el cross se aguanta mas (es el golpe fuerte de la rafaga; r3: 0.18, antes 0.16)
+        K(1.20, P { p in p.handL = CGPoint(x: 57, y: 7); p.neckOff.x = 15; p.hipDX = 5; p.hipHeight = 48; p.footL = CGPoint(x: -24, y: 49); p.footR = CGPoint(x: 27, y: 49) }, .easeIn), // recoge a guardia...
         K(1.40, P { p in // guardia, bounce — y sin pausa carga la patada
             p.hipHeight = 50; p.neckOff = CGPoint(x: 6, y: -40)
             p.footL = CGPoint(x: -20, y: 50); p.footR = CGPoint(x: 22, y: 50)
             p.handL = CGPoint(x: 17, y: 6); p.handR = CGPoint(x: 27, y: 11)
         }, .easeIn), // CHAMBER: rodilla sube, cuerpo atras
-        K(1.58, P { p in
-            p.hipHeight = 52; p.neckOff = CGPoint(x: -3, y: -41)
+        K(1.56, P { p in
+            p.hipHeight = 53; p.neckOff = CGPoint(x: -3, y: -41)
             p.footL = CGPoint(x: -13, y: 52)
-            p.footR = CGPoint(x: 16, y: 26); p.kneeR = CGPoint(x: 26, y: 22)
-            p.handL = CGPoint(x: -24, y: 20); p.handR = CGPoint(x: 20, y: 4)
-        }, .snappy), // ¡PATADA FRONTAL! extension seca en .09
-        K(1.67, P { p in // IMPACTO patada: pierna recta a la altura del pecho del "cursor"
-            p.hipHeight = 53; p.neckOff = CGPoint(x: -6, y: -41)
+            p.footR = CGPoint(x: 13, y: 25); p.kneeR = CGPoint(x: 30, y: 21)
+            p.handL = CGPoint(x: -28, y: 21); p.handR = CGPoint(x: 20, y: 4)
+        }, .snappy), // ¡PATADA FRONTAL! extension seca en .09 (r3: camara mas alta)
+        K(1.65, P { p in // IMPACTO patada: pierna recta a la altura del pecho del "cursor" (r3: +19 %)
+            p.hipHeight = 55; p.neckOff = CGPoint(x: -8, y: -41)
             p.footL = CGPoint(x: -14, y: 53)
-            p.footR = CGPoint(x: 52, y: 18); p.kneeR = CGPoint(x: 32, y: 16)
-            p.handL = CGPoint(x: -28, y: 24); p.handR = CGPoint(x: 16, y: 2)
-        }, .easeInOut), // hold de impacto
-        K(1.82, P { p in p.footR = CGPoint(x: 50, y: 20); p.kneeR = CGPoint(x: 31, y: 17); p.hipHeight = 52; p.neckOff.x = -5; p.footL = CGPoint(x: -14, y: 52) }, .easeIn), // recoge la pierna y se deja caer...
-        K(2.0, P { p in // ...al agachón que carga el barrido (anticipacion larga, la del golpe final)
-            p.hipHeight = 37; p.squash = 0.88; p.neckOff = CGPoint(x: 7, y: -31); p.headOff = CGPoint(x: 4, y: -18)
-            p.footL = CGPoint(x: -10, y: 37); p.footR = CGPoint(x: 14, y: 37)
-            p.handL = CGPoint(x: -12, y: 24); p.handR = CGPoint(x: 14, y: 26) // manos casi al suelo
+            p.footR = CGPoint(x: 62, y: 16); p.kneeR = CGPoint(x: 38, y: 14)
+            p.handL = CGPoint(x: -33, y: 26); p.handR = CGPoint(x: 16, y: 2)
+        }, .easeIn), // hold de impacto (r3: 0.17, antes 0.15)
+        K(1.82, P { p in p.footR = CGPoint(x: 60, y: 18); p.kneeR = CGPoint(x: 37, y: 15); p.hipHeight = 54; p.neckOff.x = -7; p.footL = CGPoint(x: -14, y: 52) }, .easeIn), // recoge la pierna y se deja caer...
+        K(1.98, P { p in // ...al agachón que carga el barrido (anticipacion larga, la del golpe final; r3: mas bajo)
+            p.hipHeight = 35; p.squash = 0.85; p.neckOff = CGPoint(x: 8, y: -30); p.headOff = CGPoint(x: 5, y: -17)
+            p.footL = CGPoint(x: -11, y: 35); p.footR = CGPoint(x: 16, y: 35)
+            p.handL = CGPoint(x: -12, y: 27); p.handR = CGPoint(x: 14, y: 29) // manos casi al suelo
         }, .snappy), // ¡BARRIDO GIRATORIO! pierna extendida barriendo bajo
-        K(2.18, P { p in
-            p.hipHeight = 33; p.neckOff = CGPoint(x: 10, y: -29); p.headOff = CGPoint(x: 5, y: -17)
-            p.footL = CGPoint(x: -6, y: 33); p.footR = CGPoint(x: 44, y: 8); p.kneeR = CGPoint(x: 26, y: 7)
-            p.handL = CGPoint(x: -16, y: 27); p.handR = CGPoint(x: 18, y: 29)
-        }, .easeOut), // se levanta del barrido con impulso
-        K(2.5, P { p in
-            p.hipHeight = 46; p.squash = 0.96; p.neckOff = CGPoint(x: 6, y: -38)
+        K(2.16, P { p in
+            p.hipHeight = 31; p.neckOff = CGPoint(x: 12, y: -29); p.headOff = CGPoint(x: 6, y: -17)
+            p.footL = CGPoint(x: -6, y: 33); p.footR = CGPoint(x: 53, y: 7); p.kneeR = CGPoint(x: 31, y: 6)
+            p.handL = CGPoint(x: -19, y: 29); p.handR = CGPoint(x: 21, y: 31)
+        }, .easeIn), // se levanta del barrido con impulso (r3: +20 %, hold con .easeIn)
+        K(2.5, P { p in // follow-through (r3): el impulso del barrido pasa de largo la guardia
+            p.hipHeight = 46; p.squash = 0.96; p.neckOff = CGPoint(x: 8, y: -38); p.hipDX = 2
             p.footL = CGPoint(x: -16, y: 46); p.footR = CGPoint(x: 20, y: 46)
             p.handL = CGPoint(x: -6, y: 18); p.handR = CGPoint(x: 24, y: 14)
         }, .easeInOut),
@@ -606,29 +611,31 @@ enum AnimationLibrary {
     // de amplitud) -> guardia temblorosa -> de pie.
     // CABLEADO SUGERIDO (integracion): reproducir al entrar en
     // .stunned o tras un impacto del dedo en modo pelea.
+    // R3-3 (A): recoil +20 %, hold 0,17 -> 0,20 s (.easeIn: queda
+    // clavado y suelta tarde), tambaleos +20 %, guardia mas abierta.
     static let hitReact = AnimationClip(name: "recibir golpe", duration: 1.15, loops: false, keyframes: [
         K(0.0, SkeletonPose.standing, .snappy), // de pie, sin verlo venir — el latigazo es inmediato
-        K(0.07, P { p in // RECOIL: cabeza y torso hacia atras, brazos se abren de golpe
-            p.hipHeight = 52; p.neckOff = CGPoint(x: -12, y: -37); p.headOff = CGPoint(x: -8, y: -19); p.hipDX = -7; p.squash = 0.94
-            p.handL = CGPoint(x: -34, y: 8); p.elbowL = CGPoint(x: -20, y: 14)
-            p.handR = CGPoint(x: 36, y: 2); p.elbowR = CGPoint(x: 22, y: 12)
-            p.footL = CGPoint(x: -20, y: 52); p.footR = CGPoint(x: 8, y: 46) // un pie se despega del suelo
-            p.kneeR = CGPoint(x: 2, y: 26)
-        }, .easeOut), // sale trastabillando: paso atras obligado
-        K(0.24, P { p in // TAMBALEO 1: pisa atras como puede, brazos molinete buscando equilibrio
-            p.hipHeight = 50; p.neckOff = CGPoint(x: -8, y: -39); p.headOff = CGPoint(x: -6, y: -20); p.hipDX = -5
-            p.footL = CGPoint(x: -16, y: 50); p.footR = CGPoint(x: 28, y: 50)
-            p.handL = CGPoint(x: -28, y: 22); p.handR = CGPoint(x: 30, y: 18)
+        K(0.07, P { p in // RECOIL: cabeza y torso hacia atras, brazos se abren de golpe (r3: +20 %)
+            p.hipHeight = 50; p.neckOff = CGPoint(x: -15, y: -36); p.headOff = CGPoint(x: -10, y: -18); p.hipDX = -8.5; p.squash = 0.90
+            p.handL = CGPoint(x: -41, y: 6); p.elbowL = CGPoint(x: -24, y: 13)
+            p.handR = CGPoint(x: 43, y: 0); p.elbowR = CGPoint(x: 26, y: 11)
+            p.footL = CGPoint(x: -24, y: 52); p.footR = CGPoint(x: 9, y: 44) // un pie se despega del suelo
+            p.kneeR = CGPoint(x: 3, y: 25)
+        }, .easeIn), // sale trastabillando: paso atras obligado (r3: el recoil queda clavado y suelta tarde)
+        K(0.27, P { p in // TAMBALEO 1: pisa atras como puede, brazos molinete buscando equilibrio (r3: hold del recoil 0,17 -> 0,20 s)
+            p.hipHeight = 49; p.neckOff = CGPoint(x: -10, y: -38); p.headOff = CGPoint(x: -7, y: -19); p.hipDX = -6
+            p.footL = CGPoint(x: -19, y: 50); p.footR = CGPoint(x: 34, y: 50)
+            p.handL = CGPoint(x: -34, y: 24); p.handR = CGPoint(x: 36, y: 20)
         }, .easeInOut),
-        K(0.48, P { p in // TAMBALEO 2: mitad de amplitud, ya recupera la vertical
-            p.hipHeight = 52; p.neckOff = CGPoint(x: -4, y: -41); p.headOff = CGPoint(x: -3, y: -21); p.hipDX = -2
-            p.footL = CGPoint(x: -10, y: 52); p.footR = CGPoint(x: 24, y: 52)
-            p.handL = CGPoint(x: -22, y: 14); p.handR = CGPoint(x: 24, y: 16)
+        K(0.50, P { p in // TAMBALEO 2: mitad de amplitud, ya recupera la vertical (r3: +20 %)
+            p.hipHeight = 52; p.neckOff = CGPoint(x: -5, y: -41); p.headOff = CGPoint(x: -4, y: -21); p.hipDX = -2.5
+            p.footL = CGPoint(x: -12, y: 52); p.footR = CGPoint(x: 29, y: 52)
+            p.handL = CGPoint(x: -26, y: 15); p.handR = CGPoint(x: 29, y: 17)
         }, .easeOut),
-        K(0.78, P { p in // sube una guardia TEMBLOROSA (aun no esta fino)
+        K(0.78, P { p in // sube una guardia TEMBLOROSA (aun no esta fino) (r3: +20 %)
             p.hipHeight = 54; p.neckOff = CGPoint(x: -1, y: -42); p.headOff = CGPoint(x: 0, y: -22)
-            p.footL = CGPoint(x: -18, y: 54); p.footR = CGPoint(x: 20, y: 54)
-            p.handL = CGPoint(x: -18, y: 10); p.handR = CGPoint(x: 26, y: 13)
+            p.footL = CGPoint(x: -21, y: 54); p.footR = CGPoint(x: 24, y: 54)
+            p.handL = CGPoint(x: -21, y: 10); p.handR = CGPoint(x: 31, y: 13)
         }, .softLanding),
         K(1.15, P { p in // de pie, guardia baja, listo otra vez
             p.hipHeight = 55; p.neckOff = CGPoint(x: 0, y: -42); p.headOff = CGPoint(x: 0, y: -23)
@@ -645,11 +652,11 @@ enum AnimationLibrary {
     // CABLEADO SUGERIDO (integracion): tras trip/knockDown, antes de
     // volver a idle.
     static let getUp = AnimationClip(name: "levantarse", duration: 1.05, loops: false, keyframes: [
-        K(0.0, P { p in // == pose de suelo de trip (su keyframe de 0.5): de bruces
-            p.hipHeight = 13; p.neckOff = CGPoint(x: -30, y: -5); p.headOff = CGPoint(x: -17, y: -3)
-            p.handL = CGPoint(x: -22, y: 6); p.handR = CGPoint(x: -6, y: 9)
-            p.footL = CGPoint(x: 42, y: 11); p.kneeL = CGPoint(x: 20, y: 6)
-            p.footR = CGPoint(x: 40, y: 5); p.kneeR = CGPoint(x: 18, y: 3)
+        K(0.0, P { p in // == pose de suelo de trip (su keyframe de 0.5): de bruces — R3-5: igualada a la nueva pose de suelo
+            p.hipHeight = 11; p.neckOff = CGPoint(x: -35, y: -5); p.headOff = CGPoint(x: -20, y: -3)
+            p.handL = CGPoint(x: -26, y: 6); p.handR = CGPoint(x: -7, y: 9)
+            p.footL = CGPoint(x: 49, y: 11); p.kneeL = CGPoint(x: 23, y: 6)
+            p.footR = CGPoint(x: 47, y: 5); p.kneeR = CGPoint(x: 21, y: 3)
         }, .easeOut), // empuja con los antebrazos y levanta la cabeza
         K(0.22, P { p in
             p.hipHeight = 16; p.neckOff = CGPoint(x: -25, y: -9); p.headOff = CGPoint(x: -12, y: -16)
@@ -694,6 +701,8 @@ enum AnimationLibrary {
     // lucha: cuando trepar falla, APOYA LOS DOS PIES en el dedo y
     // EMPUJA con las piernas haciendo palanca, arqueando el cuerpo
     // hacia atras — y luego resbala de vuelta a colgar. Ciclo 1.9.
+    // R3-3 (A): balanceo, patada, trepa, apoyo y empuje +17-25 %;
+    // el empuje pasa de largo (follow-through: arco mayor, pies mas altos).
     static let grabFinger = AnimationClip(name: "agarrar-dedo", duration: 1.9, loops: true, keyframes: [
         K(0.0, P { p in // recien agarrado: cuelga de las dos manos
             p.hipHeight = 58; p.neckOff = CGPoint(x: -3, y: -44)
@@ -702,45 +711,45 @@ enum AnimationLibrary {
             p.footL = CGPoint(x: -14, y: 52); p.kneeL = CGPoint(x: -10, y: 26)
             p.footR = CGPoint(x: 16, y: 50); p.kneeR = CGPoint(x: 11, y: 25)
         }, .easeInOut),
-        K(0.35, P { p in // balanceo: el cuerpo va a un lado
-            p.neckOff = CGPoint(x: 4, y: -44); p.hipDX = 4
+        K(0.35, P { p in // balanceo: el cuerpo va a un lado — R3-3 (A)
+            p.neckOff = CGPoint(x: 5, y: -44); p.hipDX = 5
             p.handL = CGPoint(x: -6, y: -34); p.handR = CGPoint(x: 8, y: -34)
-            p.footL = CGPoint(x: -19, y: 49); p.footR = CGPoint(x: 12, y: 53)
+            p.footL = CGPoint(x: -23, y: 49); p.footR = CGPoint(x: 14, y: 53)
         }, .snappy), // ¡PATEA el dedo con las dos piernas!
-        K(0.55, P { p in
-            p.hipHeight = 54; p.neckOff = CGPoint(x: 6, y: -42); p.hipDX = 3
+        K(0.55, P { p in // R3-3 (A): patada mas alta y mas larga
+            p.hipHeight = 52; p.neckOff = CGPoint(x: 7, y: -42); p.hipDX = 3.5
             p.handL = CGPoint(x: -6, y: -34); p.handR = CGPoint(x: 8, y: -34)
-            p.footL = CGPoint(x: 8, y: 34); p.kneeL = CGPoint(x: 10, y: 18)
-            p.footR = CGPoint(x: 14, y: 36); p.kneeR = CGPoint(x: 13, y: 19)
+            p.footL = CGPoint(x: 10, y: 30); p.kneeL = CGPoint(x: 12, y: 16)
+            p.footR = CGPoint(x: 17, y: 32); p.kneeR = CGPoint(x: 15, y: 17)
         }, .easeInOut), // se recoge tras la patada
-        K(0.8, P { p in
-            p.neckOff = CGPoint(x: -2, y: -44); p.hipDX = -2
+        K(0.8, P { p in // R3-3 (A)
+            p.neckOff = CGPoint(x: -2.5, y: -44); p.hipDX = -2.5
             p.handL = CGPoint(x: -6, y: -34); p.handR = CGPoint(x: 8, y: -34)
-            p.footL = CGPoint(x: -12, y: 51); p.footR = CGPoint(x: 17, y: 50)
+            p.footL = CGPoint(x: -14, y: 51); p.footR = CGPoint(x: 20, y: 50)
         }, .easeIn), // intenta TREPAR por el dedo: tira de brazos
-        K(1.15, P { p in // sube un palmo: manos mas arriba, cuerpo pegado al "dedo"
-            p.hipHeight = 63; p.squash = 1.04; p.neckOff = CGPoint(x: 0, y: -45)
-            p.handL = CGPoint(x: -5, y: -40); p.elbowL = CGPoint(x: -13, y: -18)
-            p.handR = CGPoint(x: 7, y: -40); p.elbowR = CGPoint(x: 13, y: -18)
-            p.footL = CGPoint(x: -10, y: 48); p.kneeL = CGPoint(x: -13, y: 24)
-            p.footR = CGPoint(x: 11, y: 47); p.kneeR = CGPoint(x: 13, y: 23)
+        K(1.15, P { p in // sube un palmo: manos mas arriba, cuerpo pegado al "dedo" — R3-3 (A)
+            p.hipHeight = 65; p.squash = 1.05; p.neckOff = CGPoint(x: 0, y: -45)
+            p.handL = CGPoint(x: -5, y: -44); p.elbowL = CGPoint(x: -14, y: -19)
+            p.handR = CGPoint(x: 7, y: -44); p.elbowR = CGPoint(x: 14, y: -19)
+            p.footL = CGPoint(x: -12, y: 48); p.kneeL = CGPoint(x: -15, y: 24)
+            p.footR = CGPoint(x: 13, y: 47); p.kneeR = CGPoint(x: 15, y: 23)
         }, .easeInOut), // se le acaba la fuerza y cae de vuelta a colgar
-        K(1.38, P { p in
-            p.hipHeight = 58; p.neckOff = CGPoint(x: -3, y: -44)
+        K(1.38, P { p in // R3-3 (A)
+            p.hipHeight = 58; p.neckOff = CGPoint(x: -3.5, y: -44)
             p.handL = CGPoint(x: -6, y: -34); p.handR = CGPoint(x: 8, y: -34)
-            p.footL = CGPoint(x: -15, y: 52); p.footR = CGPoint(x: 15, y: 51)
+            p.footL = CGPoint(x: -18, y: 52); p.footR = CGPoint(x: 18, y: 51)
         }, .easeIn), // v6: busca apoyo con los pies EN el dedo (brace)
-        K(1.6, P { p in // APOYA los dos pies en el dedo, piernas flexionadas, cuerpo arqueado atras
-            p.hipHeight = 56; p.neckOff = CGPoint(x: -8, y: -43); p.hipDX = -5
+        K(1.6, P { p in // APOYA los dos pies en el dedo, piernas flexionadas, cuerpo arqueado atras — R3-3 (A)
+            p.hipHeight = 55; p.neckOff = CGPoint(x: -10, y: -43); p.hipDX = -6
             p.handL = CGPoint(x: -6, y: -34); p.handR = CGPoint(x: 8, y: -34)
-            p.footL = CGPoint(x: -2, y: 32); p.kneeL = CGPoint(x: -8, y: 20)
-            p.footR = CGPoint(x: 5, y: 35); p.kneeR = CGPoint(x: 0, y: 22)
+            p.footL = CGPoint(x: -3, y: 29); p.kneeL = CGPoint(x: -10, y: 18)
+            p.footR = CGPoint(x: 6, y: 32); p.kneeR = CGPoint(x: 1, y: 20)
         }, .snappy), // ¡EMPUJA con las piernas! palanca con todo el cuerpo
-        K(1.74, P { p in
-            p.hipHeight = 61; p.squash = 1.03; p.neckOff = CGPoint(x: -11, y: -44); p.hipDX = -7
-            p.handL = CGPoint(x: -6, y: -31); p.handR = CGPoint(x: 8, y: -31) // las manos resbalan un poco
-            p.footL = CGPoint(x: 2, y: 26); p.kneeL = CGPoint(x: -2, y: 16)
-            p.footR = CGPoint(x: 9, y: 29); p.kneeR = CGPoint(x: 4, y: 18)
+        K(1.74, P { p in // R3-3 (A): el empuje pasa de largo — follow-through
+            p.hipHeight = 63; p.squash = 1.05; p.neckOff = CGPoint(x: -13, y: -44); p.hipDX = -8.5
+            p.handL = CGPoint(x: -6, y: -33); p.handR = CGPoint(x: 8, y: -33) // las manos resbalan un poco
+            p.footL = CGPoint(x: 3, y: 22); p.kneeL = CGPoint(x: -2, y: 14)
+            p.footR = CGPoint(x: 11, y: 25); p.kneeR = CGPoint(x: 5, y: 16)
         }, .easeInOut) // no cede: resbala de vuelta a colgar (el cierre de bucle lo devuelve)
     ])
 
@@ -749,39 +758,42 @@ enum AnimationLibrary {
     // no lleva metronomo), retorcimiento mayor (hipDX +-3, cabeza
     // +-4) y un EMPUJE DOBLE aguantado .06 en mitad del ciclo — ese
     // micro-freeze en pleno esfuerzo es lo que lo hace leer "real"
-    // en vez de "gif en bucle". Todo lineal a proposito.
+    // en vez de "gif en bucle". Casi todo lineal a proposito (el panico
+    // no lleva metronomo); R3-3 (A): pataleo +20 %, freeze 0,06 -> 0,10 s,
+    // la llegada al EMPUJE DOBLE es .snappy, el freeze .easeIn y la
+    // suelta .snappy.
     static let grabbed = AnimationClip(name: "agarrado", duration: 0.64, loops: true, keyframes: [
-        K(0.0, P { p in
-            p.footL = CGPoint(x: -22, y: 38); p.kneeL = CGPoint(x: -15, y: 17)
-            p.footR = CGPoint(x: 20, y: 44); p.kneeR = CGPoint(x: 14, y: 21)
-            p.handL = CGPoint(x: -29, y: 4); p.handR = CGPoint(x: 27, y: 0); p.headOff = CGPoint(x: -4, y: -22)
+        K(0.0, P { p in // R3-3 (A): pataleo +20 %
+            p.footL = CGPoint(x: -26, y: 38); p.kneeL = CGPoint(x: -18, y: 17)
+            p.footR = CGPoint(x: 24, y: 44); p.kneeR = CGPoint(x: 17, y: 21)
+            p.handL = CGPoint(x: -35, y: 4); p.handR = CGPoint(x: 32, y: 0); p.headOff = CGPoint(x: -5, y: -22)
         }, .linear),
-        K(0.11, P { p in // patada izquierda, brazo contrario
-            p.footL = CGPoint(x: -10, y: 47); p.kneeL = CGPoint(x: -8, y: 22)
-            p.footR = CGPoint(x: 26, y: 35); p.kneeR = CGPoint(x: 17, y: 15)
-            p.handL = CGPoint(x: -24, y: -7); p.handR = CGPoint(x: 31, y: 10); p.headOff = CGPoint(x: 4, y: -22); p.hipDX = 2
+        K(0.11, P { p in // patada izquierda, brazo contrario — R3-3 (A)
+            p.footL = CGPoint(x: -12, y: 47); p.kneeL = CGPoint(x: -10, y: 22)
+            p.footR = CGPoint(x: 31, y: 35); p.kneeR = CGPoint(x: 20, y: 15)
+            p.handL = CGPoint(x: -29, y: -8); p.handR = CGPoint(x: 37, y: 12); p.headOff = CGPoint(x: 5, y: -22); p.hipDX = 2.5
         }, .linear),
-        K(0.21, P { p in // patada derecha, se retuerce al otro lado
-            p.footL = CGPoint(x: -26, y: 42); p.kneeL = CGPoint(x: -17, y: 19)
-            p.footR = CGPoint(x: 11, y: 48); p.kneeR = CGPoint(x: 9, y: 23)
-            p.handL = CGPoint(x: -31, y: 10); p.handR = CGPoint(x: 23, y: -5); p.headOff = CGPoint(x: -2, y: -21); p.hipDX = -3
+        K(0.21, P { p in // patada derecha, se retuerce al otro lado — R3-3 (A)
+            p.footL = CGPoint(x: -31, y: 42); p.kneeL = CGPoint(x: -20, y: 19)
+            p.footR = CGPoint(x: 13, y: 48); p.kneeR = CGPoint(x: 11, y: 23)
+            p.handL = CGPoint(x: -37, y: 12); p.handR = CGPoint(x: 28, y: -6); p.headOff = CGPoint(x: -2.5, y: -21); p.hipDX = -3.5
+        }, .snappy), // el EMPUJE DOBLE entra seco
+        K(0.32, P { p in // EMPUJE DOBLE: las dos piernas a la vez contra la pinza — R3-3 (A): +20 %, freeze 0,06 -> 0,10 s
+            p.footL = CGPoint(x: -21, y: 52); p.footR = CGPoint(x: 23, y: 52)
+            p.kneeL = CGPoint(x: -12, y: 25); p.kneeR = CGPoint(x: 13, y: 25)
+            p.handL = CGPoint(x: -32, y: -4); p.handR = CGPoint(x: 35, y: 7); p.hipDX = 3.5; p.squash = 0.94
+        }, .easeIn), // el esfuerzo queda clavado y suelta tarde
+        K(0.42, P { p in // ...AGUANTADO: el esfuerzo se congela un instante — R3-3 (A): freeze 0,10 s
+            p.footL = CGPoint(x: -21, y: 52); p.footR = CGPoint(x: 23, y: 52)
+            p.handL = CGPoint(x: -31, y: -3); p.handR = CGPoint(x: 34, y: 8); p.hipDX = 3.5
+        }, .snappy), // suelta de golpe y vuelve el pataleo
+        K(0.50, P { p in // suelta de golpe y vuelve el pataleo — R3-3 (A)
+            p.footL = CGPoint(x: -29, y: 35); p.footR = CGPoint(x: 29, y: 39)
+            p.handL = CGPoint(x: -35, y: 10); p.handR = CGPoint(x: 30, y: -8); p.headOff = CGPoint(x: -5, y: -21); p.hipDX = -2.5
         }, .linear),
-        K(0.32, P { p in // EMPUJE DOBLE: las dos piernas a la vez contra la pinza
-            p.footL = CGPoint(x: -17, y: 49); p.footR = CGPoint(x: 19, y: 49)
-            p.kneeL = CGPoint(x: -10, y: 24); p.kneeR = CGPoint(x: 11, y: 24)
-            p.handL = CGPoint(x: -27, y: -3); p.handR = CGPoint(x: 29, y: 6); p.hipDX = 3; p.squash = 0.97
-        }, .linear),
-        K(0.38, P { p in // ...AGUANTADO: el esfuerzo se congela un instante
-            p.footL = CGPoint(x: -17, y: 49); p.footR = CGPoint(x: 19, y: 49)
-            p.handL = CGPoint(x: -26, y: -2); p.handR = CGPoint(x: 28, y: 7); p.hipDX = 3
-        }, .linear),
-        K(0.47, P { p in // suelta de golpe y vuelve el pataleo
-            p.footL = CGPoint(x: -24, y: 35); p.footR = CGPoint(x: 24, y: 39)
-            p.handL = CGPoint(x: -29, y: 8); p.handR = CGPoint(x: 25, y: -7); p.headOff = CGPoint(x: -4, y: -21); p.hipDX = -2
-        }, .linear),
-        K(0.56, P { p in
-            p.footL = CGPoint(x: -11, y: 46); p.footR = CGPoint(x: 14, y: 48)
-            p.handL = CGPoint(x: -24, y: 0); p.handR = CGPoint(x: 30, y: 4); p.headOff = CGPoint(x: 2, y: -22); p.hipDX = 1
+        K(0.58, P { p in // R3-3 (A)
+            p.footL = CGPoint(x: -13, y: 46); p.footR = CGPoint(x: 17, y: 48)
+            p.handL = CGPoint(x: -29, y: 0); p.handR = CGPoint(x: 36, y: 5); p.headOff = CGPoint(x: 2.5, y: -22); p.hipDX = 1.2
         }, .linear)
     ])
 
@@ -794,25 +806,27 @@ enum AnimationLibrary {
     // violencia maxima (amplitud 6-7, squash extremos) -> RESETEO
     // visible: se agacha, re-agarra las paredes y respira (.26) —
     // el descenso de amplitud ahora es PARTE de la animacion, no un
-    // corte del bucle. Todo lineal: la violencia no lleva easing.
+    // corte del bucle. Casi todo lineal; R3-3 (A): fases +20 %
+    // (1: 3,5 · 2: 6 · 3: 8,5), las llegadas de la FASE 3 son .snappy
+    // (el golpe contra la pared entra seco) y el reseteo se agacha mas.
     static let escapeShake = AnimationClip(name: "escapar-caja", duration: 2.6, loops: true, keyframes: [
         // FASE 1: sacudidas flojas, aun esta probando la caja
-        K(0.0, P { $0.hipDX = -2; $0.squash = 0.97; $0.handL = CGPoint(x: -22, y: 18); $0.handR = CGPoint(x: 22, y: 18); $0.headOff = CGPoint(x: -2, y: -23) }, .linear),
-        K(0.18, P { $0.hipDX = 2; $0.squash = 1.02; $0.headOff.x = 2 }, .linear),
-        K(0.36, P { $0.hipDX = -2; $0.squash = 0.96; $0.headOff.x = -2 }, .linear),
-        K(0.54, P { $0.hipDX = 3; $0.squash = 1.03; $0.headOff.x = 3 }, .linear),
+        K(0.0, P { $0.hipDX = -2.5; $0.squash = 0.96; $0.handL = CGPoint(x: -26, y: 18); $0.handR = CGPoint(x: 26, y: 18); $0.headOff = CGPoint(x: -2.5, y: -23) }, .linear),
+        K(0.18, P { $0.hipDX = 2.5; $0.squash = 1.03; $0.headOff.x = 2.5 }, .linear),
+        K(0.36, P { $0.hipDX = -2.5; $0.squash = 0.95; $0.headOff.x = -2.5 }, .linear),
+        K(0.54, P { $0.hipDX = 3.5; $0.squash = 1.04; $0.headOff.x = 3.5 }, .linear),
         // FASE 2: manos abiertas contra las paredes, empuja de verdad
-        K(0.74, P { $0.hipDX = -4; $0.squash = 0.94; $0.handL = CGPoint(x: -28, y: 10); $0.handR = CGPoint(x: 26, y: 20); $0.headOff.x = -4 }, .linear),
-        K(0.94, P { $0.hipDX = 5; $0.squash = 1.05; $0.handL = CGPoint(x: -26, y: 20); $0.handR = CGPoint(x: 28, y: 10); $0.headOff.x = 5 }, .linear),
-        K(1.14, P { $0.hipDX = -5; $0.squash = 0.93; $0.handL = CGPoint(x: -29, y: 12); $0.handR = CGPoint(x: 27, y: 18); $0.headOff.x = -5 }, .linear),
-        K(1.34, P { $0.hipDX = 5; $0.squash = 1.06; $0.handL = CGPoint(x: -27, y: 18); $0.handR = CGPoint(x: 29, y: 12); $0.headOff.x = 5 }, .linear),
+        K(0.74, P { $0.hipDX = -5; $0.squash = 0.92; $0.handL = CGPoint(x: -33, y: 10); $0.handR = CGPoint(x: 31, y: 20); $0.headOff.x = -5 }, .linear),
+        K(0.94, P { $0.hipDX = 6; $0.squash = 1.07; $0.handL = CGPoint(x: -31, y: 20); $0.handR = CGPoint(x: 33, y: 10); $0.headOff.x = 6 }, .linear),
+        K(1.14, P { $0.hipDX = -6; $0.squash = 0.91; $0.handL = CGPoint(x: -35, y: 12); $0.handR = CGPoint(x: 32, y: 18); $0.headOff.x = -6 }, .linear),
+        K(1.34, P { $0.hipDX = 6; $0.squash = 1.08; $0.handL = CGPoint(x: -32, y: 18); $0.handR = CGPoint(x: 35, y: 12); $0.headOff.x = 6 }, .linear),
         // FASE 3: violencia maxima — a punto de romperla
-        K(1.54, P { $0.hipDX = -7; $0.squash = 0.9; $0.handL = CGPoint(x: -31, y: 8); $0.handR = CGPoint(x: 29, y: 16); $0.headOff.x = -7; $0.hipHeight = 52; $0.footL = CGPoint(x: -20, y: 52); $0.footR = CGPoint(x: 20, y: 52) }, .linear),
-        K(1.72, P { $0.hipDX = 7; $0.squash = 1.08; $0.handL = CGPoint(x: -29, y: 16); $0.handR = CGPoint(x: 31, y: 8); $0.headOff.x = 7 }, .linear),
-        K(1.9, P { $0.hipDX = -7; $0.squash = 0.9; $0.handL = CGPoint(x: -31, y: 10); $0.handR = CGPoint(x: 30, y: 14); $0.headOff.x = -7 }, .linear),
-        K(2.08, P { $0.hipDX = 6; $0.squash = 1.07; $0.headOff.x = 6 }, .linear),
+        K(1.54, P { $0.hipDX = -8.5; $0.squash = 0.86; $0.handL = CGPoint(x: -37, y: 8); $0.handR = CGPoint(x: 35, y: 16); $0.headOff.x = -8.5; $0.hipHeight = 50; $0.footL = CGPoint(x: -24, y: 50); $0.footR = CGPoint(x: 24, y: 50) }, .snappy),
+        K(1.72, P { $0.hipDX = 8.5; $0.squash = 1.12; $0.handL = CGPoint(x: -35, y: 16); $0.handR = CGPoint(x: 37, y: 8); $0.headOff.x = 8.5 }, .snappy),
+        K(1.9, P { $0.hipDX = -8.5; $0.squash = 0.86; $0.handL = CGPoint(x: -37, y: 10); $0.handR = CGPoint(x: 36, y: 14); $0.headOff.x = -8.5 }, .snappy),
+        K(2.08, P { $0.hipDX = 7.5; $0.squash = 1.11; $0.headOff.x = 7.5 }, .linear),
         // RESETEO: se agacha, re-agarra y respira antes de volver a probar
-        K(2.34, P { $0.hipDX = 0; $0.squash = 0.9; $0.hipHeight = 48; $0.handL = CGPoint(x: -18, y: 26); $0.handR = CGPoint(x: 18, y: 26); $0.headOff = CGPoint(x: 0, y: -20); $0.neckOff = CGPoint(x: 0, y: -38); $0.footL = CGPoint(x: -15, y: 48); $0.footR = CGPoint(x: 15, y: 48) }, .linear)
+        K(2.34, P { $0.hipDX = 0; $0.squash = 0.88; $0.hipHeight = 46; $0.handL = CGPoint(x: -20, y: 26); $0.handR = CGPoint(x: 20, y: 26); $0.headOff = CGPoint(x: 0, y: -20); $0.neckOff = CGPoint(x: 0, y: -38); $0.footL = CGPoint(x: -17, y: 46); $0.footR = CGPoint(x: 17, y: 46) }, .linear)
     ])
 
     // La ROTURA de la caja v6 (NUEVO — el instante en que escapa en
@@ -1408,20 +1422,22 @@ enum AnimationLibrary {
     ])
     /// Tropezar (Trip): traspiés, brazos aspas, cae de bruces y se levanta atontado.
     /// Pose larga de suelo, como las caidas largas de la spec (30-52 ticks).
+    /// Ronda 3-5 (A, saltos y caidas): traspiés más largo, caída que acelera
+    /// (.powerIn), de bruces más plano y largo, y levantada con follow-through.
     static let trip = AnimationClip(name: "tropezar", duration: 1.5, loops: false, keyframes: [
-        K(0.0, P { p in p.neckOff = CGPoint(x: 8, y: -40); p.footL = CGPoint(x: 22, y: 46); p.footR = CGPoint(x: 4, y: 40) }, .snappy), // traspiés
+        K(0.0, P { p in p.neckOff = CGPoint(x: 10, y: -40); p.footL = CGPoint(x: 26, y: 46); p.footR = CGPoint(x: 4, y: 40) }, .snappy), // R3-5: traspiés más largo (22->26)
         K(0.25, P { p in // cae hacia delante, brazos aspas
-            p.hipHeight = 40; p.neckOff = CGPoint(x: 14, y: -32); p.headOff = CGPoint(x: 6, y: -18)
-            p.handL = CGPoint(x: -26, y: -16); p.handR = CGPoint(x: 30, y: -10)
-            p.footL = CGPoint(x: -14, y: 38); p.footR = CGPoint(x: 10, y: 36)
-        }, .easeIn),
+            p.hipHeight = 37; p.neckOff = CGPoint(x: 17, y: -32); p.headOff = CGPoint(x: 8, y: -18)
+            p.handL = CGPoint(x: -31, y: -19); p.handR = CGPoint(x: 35, y: -12)
+            p.footL = CGPoint(x: -17, y: 38); p.footR = CGPoint(x: 12, y: 36)
+        }, .powerIn), // R3-5: la caída al suelo ACELERA
         K(0.5, P { p in // de bruces en el suelo (pose larga)
-            p.hipHeight = 13; p.neckOff = CGPoint(x: -30, y: -5); p.headOff = CGPoint(x: -17, y: -3)
-            p.handL = CGPoint(x: -22, y: 6); p.handR = CGPoint(x: -6, y: 9)
-            p.footL = CGPoint(x: 42, y: 11); p.footR = CGPoint(x: 40, y: 5); p.kneeL = CGPoint(x: 20, y: 6); p.kneeR = CGPoint(x: 18, y: 3)
+            p.hipHeight = 11; p.neckOff = CGPoint(x: -35, y: -5); p.headOff = CGPoint(x: -20, y: -3)
+            p.handL = CGPoint(x: -26, y: 6); p.handR = CGPoint(x: -7, y: 9)
+            p.footL = CGPoint(x: 49, y: 11); p.footR = CGPoint(x: 47, y: 5); p.kneeL = CGPoint(x: 23, y: 6); p.kneeR = CGPoint(x: 21, y: 3)
         }, .easeOut),
-        K(1.05, P { p in p.hipHeight = 14; p.headOff.y = -6 }, .easeInOut), // atontado, quieto
-        K(1.5, P { p in p.hipHeight = 34; p.neckOff = CGPoint(x: 4, y: -34) }, .easeOut) // se incorpora
+        K(1.12, P { p in p.hipHeight = 13; p.headOff.y = -8 }, .easeInOut), // R3-5: atontado, quieto (hold 0.55->0.62 s)
+        K(1.5, P { p in p.hipHeight = 39; p.neckOff = CGPoint(x: 5, y: -37) }, .backOut) // R3-5: se incorpora con impulso (34->39)
     ])
     /// Bounce: botar al levantarse / de contento (squash-stretch exagerado).
     static let bounce = AnimationClip(name: "botar", duration: 0.9, loops: false, keyframes: [
