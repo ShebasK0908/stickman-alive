@@ -749,6 +749,47 @@ final class StickmanController: ObservableObject {
         return best
     }
 
+    /// R4: DISTANCIA MANO→PIES en la pose hangWall, MEDIDA sobre la
+    /// cadena real de jointPoints (StickmanView): cadera 52 + cuello
+    /// 42×1,06 (torsoFactor) + mano agarrada 52 sobre el cuello =
+    /// 148,5 uds de pose × 0,8 (figureScale) = 118,8 pt en pantalla.
+    /// R10 colgaba los pies a 74 pt del borde «a ojo» y la mano
+    /// agarrada se dibujaba ~45 pt POR ENCIMA del borde (flotaba en
+    /// el aire). Con 118 la mano cae SOBRE el borde.
+    /// Corolario geometrico (sin maquillar): un borde solo admite
+    /// el colgado literal si esta a ≥ ~116 pt sobre la plataforma de
+    /// debajo; si no, los pies atravesarian el suelo al colgar.
+    static let edgeHangDrop: CGFloat = 118
+    static let edgeHangMinHeight: CGFloat = 116
+
+    /// R4: BORDES AGARRABLES DE LA ESCENA (v11), en el MISMO sistema
+    /// de agarre que los trazos: el borde izquierdo de la repisa de
+    /// Muestras (196) y el borde exterior de cada repisa-icono de la
+    /// barra de herramientas (los que superen la altura minima de
+    /// colgado; el filtro de abajo aplica la geometria). El borde
+    /// del panel de Propiedades (104) se incluye en la lista pero el
+    /// filtro lo descarta solo: a 104 pt no cabe el cuerpo colgando.
+    /// La ESQUINA de la linea de tiempo (46) y el cabezal (58)
+    /// quedan fuera del colgado literal por la misma razon; la
+    /// esquina tiene en cambio agarre-salvamento al salir caminando
+    /// de la linea de tiempo (ver groundSnap).
+    private func sceneEdges() -> [(point: CGPoint, inward: CGFloat)] {
+        let layout = SceneLayout(width: lastWidth, height: lastHeight, phase: phase)
+        var edges: [(point: CGPoint, inward: CGFloat)] = []
+        edges.append((point: CGPoint(x: layout.panelMinX, y: SceneLayout.panelHeight), inward: 1))
+        edges.append((point: CGPoint(x: layout.shelfMinX, y: SceneLayout.shelfHeight), inward: 1))
+        for h in layout.toolLedgeHeights {
+            edges.append((point: CGPoint(x: layout.toolCellMaxX, y: h), inward: -1))
+        }
+        return edges.filter { $0.point.y >= Self.edgeHangMinHeight }
+    }
+
+    /// Todos los bordes de los que puede colgarse: los trazos del
+    /// usuario (R10) + los de la escena (R4), mismo agarre.
+    private func allGrabbableEdges() -> [(point: CGPoint, inward: CGFloat)] {
+        strokeEdges() + sceneEdges()
+    }
+
     /// R10: BORDES AGARRABLES de los trazos del usuario: los extremos
     /// de cada tramo caminable (donde la plataforma dibujada se
     /// acaba). Cada borde trae su direccion «hacia dentro» (hacia
@@ -770,15 +811,16 @@ final class StickmanController: ObservableObject {
         return edges
     }
 
-    /// R10: se agarra del borde de un trazo y queda COLGANDO de el
-    /// (clip hangWall, pendulo de 2,4 s). Los pies quedan 74 pt por
-    /// debajo del borde: su mano agarrada (pose hangWall) llega a
-    /// ~77 pt sobre los pies, asi que la mano cae sobre el borde.
+    /// R10: se agarra de un borde (trazo del usuario o escena, R4) y
+    /// queda COLGANDO de el (clip hangWall + pendulo procedural de
+    /// la v10/R4). Los pies quedan edgeHangDrop (118) por debajo del
+    /// borde: es la distancia mano→pies MEDIDA de la pose (ver la
+    /// constante), asi que la mano agarrada cae sobre el borde.
     private func startEdgeHang(at edge: CGPoint, inward: CGFloat) {
         edgeHangPoint = edge
         edgeHangInward = inward
         x = edge.x
-        heightAboveGround = max(0, edge.y - platformHeight - 74)
+        heightAboveGround = max(0, edge.y - platformHeight - Self.edgeHangDrop)
         velocityX = 0; velocityY = 0
         setFacing(inward >= 0 ? 1 : -1)
         startOverride(.hangingWall, duration: Double.random(in: 1.5...3.2))
@@ -1354,7 +1396,11 @@ final class StickmanController: ObservableObject {
 
         // ------- FISICA (saltos / lanzamientos / caidas) -------
         // v3: anclado a pared/techo la altura NO es caida: manda la superficie.
-        if (mode == .physics || isAirborne) && surface == .floor && action != .escapeBurst {
+        // R4: colgado de un borde manda el override (lo clava cada
+        // frame); sin esta guarda, isAirborne (pies a 118 del borde)
+        // reabria la fisica y el colgado se caia — de hecho limitaba
+        // los cuelgues de R10 a bordes de 60-74 pt de alto.
+        if (mode == .physics || isAirborne) && surface == .floor && action != .escapeBurst && edgeHangPoint == nil {
             if action != .flying {
                 let atLeftWall = x <= 35, atRightWall = x >= stageWidth - 35
                 isWallSliding = (atLeftWall || atRightWall) && velocityY < -60 && heightAboveGround > 4
@@ -1385,13 +1431,21 @@ final class StickmanController: ObservableObject {
                         else { action = .idle; mode = .plan; planGapTimer = 0.2 }  // R3-2 (B)
                     }
                 }
-                // R10: cayendo junto al BORDE de un trazo, a veces se
-                // agarra en el ultimo momento y queda colgando de el
-                // (era el hueco que faltaba de «dibujos solidos»).
+                // R10+R4: cayendo junto a un BORDE (trazo del usuario
+                // o escena: repisa de Muestras, iconos-repisa), a
+                // veces se agarra en el ultimo momento y queda
+                // colgando de el. El test es de CRUCE DE LA MANO: la
+                // mano agarrada va edgeHangDrop sobre los pies; se
+                // agarra si este frame la mano cruza el borde hacia
+                // abajo (antes por encima, ahora a su altura). Solo
+                // bordes con sitio real para colgar (≥ 116 sobre su
+                // plataforma).
                 if edgeHangPoint == nil, edgeGrabCooldown <= 0, velocityY < -50 {
-                    let feetNow = platformHeight + heightAboveGround
-                    for e in strokeEdges() {
-                        if abs(x - e.point.x) <= 24, e.point.y > feetNow + 20, e.point.y < feetNow + 95, e.point.y - platformHeight >= 60 {
+                    let handBefore = platformHeight + feetBeforeFall + Self.edgeHangDrop
+                    let handNow = platformHeight + heightAboveGround + Self.edgeHangDrop
+                    for e in allGrabbableEdges() {
+                        if abs(x - e.point.x) <= 26, handBefore > e.point.y, handNow <= e.point.y + 4,
+                           e.point.y - platformHeight >= Self.edgeHangMinHeight {
                             if Double.random(in: 0...1) < 0.7 { startEdgeHang(at: e.point, inward: e.inward) }
                             else { edgeGrabCooldown = 0.4 }
                             break
@@ -1413,7 +1467,7 @@ final class StickmanController: ObservableObject {
             if let hang = edgeHangPoint {
                 if action == .hangingWall {
                     x = hang.x
-                    heightAboveGround = max(0, hang.y - platformHeight - 74)
+                    heightAboveGround = max(0, hang.y - platformHeight - Self.edgeHangDrop)
                 } else { edgeHangPoint = nil }
             }
             // Escondite: al llegar al objeto, se agazapa tras el
@@ -1570,20 +1624,53 @@ final class StickmanController: ObservableObject {
         if heightAboveGround < target - 1 {
             heightAboveGround = target      // sube a la plataforma/trazo (escalon)
         } else if heightAboveGround > target + 5 {
-            // R10: si el suelo que desaparece es el BORDE de un trazo
-            // y el iba a pie, a veces se agarra del borde en vez de
-            // caer: se le ve colgar, balancearse, y luego subir o
-            // soltarse. Solo si hay sitio para colgar (>= 60 de alto).
+            // R10+R4: si el suelo que desaparece es un BORDE (trazo
+            // del usuario o escena) y el iba a pie, a veces se agarra
+            // del borde en vez de caer: se le ve colgar, balancearse,
+            // y luego subir o soltarse. Solo si hay sitio real para
+            // colgar (>= 116 de alto, ver edgeHangMinHeight).
             if edgeHangPoint == nil, [.walking, .running, .idle].contains(action) {
                 let feetNow = platformHeight + heightAboveGround
                 var grabbedEdge = false
-                for e in strokeEdges() {
-                    if abs(x - e.point.x) <= 22, abs(e.point.y - feetNow) <= 8, e.point.y - platformHeight >= 60 {
+                for e in allGrabbableEdges() {
+                    if abs(x - e.point.x) <= 22, abs(e.point.y - feetNow) <= 8, e.point.y - platformHeight >= Self.edgeHangMinHeight {
                         if Double.random(in: 0...1) < 0.55 { startEdgeHang(at: e.point, inward: e.inward); grabbedEdge = true }
                         break
                     }
                 }
                 if grabbedEdge { return }
+                // R4: ESQUINA DE LA LINEA DE TIEMPO — salvamento, no
+                // colgado: a 46 pt no cabe el cuerpo colgando (la
+                // mano va 118 sobre los pies: colgar le enterraria
+                // los pies 72 pt bajo el suelo). Lo viable: al salir
+                // caminando por el extremo izquierdo, a veces se
+                // agarra de la esquina y se SUBE de vuelta a pulso
+                // (clip pullUp) en vez de caer al escalon.
+                let layout = SceneLayout(width: lastWidth, height: lastHeight, phase: phase)
+                if abs(feetNow - SceneLayout.timelineHeight) <= 6, x <= layout.timelineMinX + 8 {
+                    if Double.random(in: 0...1) < 0.55 {
+                        x = layout.timelineMinX + 16
+                        heightAboveGround = SceneLayout.timelineHeight - platformHeight
+                        startOverride(.pullingUp, duration: 0.9)
+                        setThought("¡por los pelos!")
+                        return
+                    }
+                }
+                // R4: REPISA -> PARED sin soltarse (el reverso de
+                // mountLedge): si el suelo que pierde es una repisa
+                // de icono de la barra de herramientas, la pared esta
+                // ahi mismo (misma x): se descuelga AGARRADO a ella
+                // en vez de caer al vacio.
+                if heightAboveGround >= 100, x <= layout.toolbarMaxX + 10 {
+                    let onLedge = layout.toolLedgeHeights.contains { abs($0 - feetNow) <= 8 }
+                    if onLedge {
+                        surface = .wallLeft
+                        platformHeight = 0
+                        startOverride(.hangingWall, duration: 1.3)
+                        setThought("¡me agarro!")
+                        return
+                    }
+                }
             }
             velocityY = 0; mode = .physics   // el suelo desaparece: cae
             // v9: si iba cargando, cae abrazando la carga (fallWithObject)
@@ -1663,9 +1750,33 @@ final class StickmanController: ObservableObject {
             x = surface == .wallLeft ? 36 : lastWidth - 36
             moveSpeed = 0
             if action == .wallClimbing {
+                let prevH = heightAboveGround
                 heightAboveGround += climbDir * 46 * CGFloat(dt)
                 gaitPhase01 += dt * 1.4
                 if gaitPhase01 >= 1 { gaitPhase01 -= 1 }
+                // R4: PARED -> REPISA sin soltarse: trepando junto a
+                // la barra de herramientas (pared izquierda) o junto
+                // a los paneles (derecha), al CRUZAR la altura de una
+                // repisa puede encaramarse a ella en vez de seguir de
+                // largo — antes solo se llegaba cayendo o saltando.
+                if climbDir > 0 {
+                    let layout = SceneLayout(width: lastWidth, height: lastHeight, phase: phase)
+                    if surface == .wallLeft {
+                        for h in layout.toolLedgeHeights where h >= 90 {
+                            if prevH < h && heightAboveGround >= h && Double.random(in: 0...1) < 0.45 {
+                                mountLedge(x: 22, height: h)
+                                return true
+                            }
+                        }
+                    } else if surface == .wallRight {
+                        for h in [SceneLayout.panelHeight, SceneLayout.shelfHeight] {
+                            if prevH < h && heightAboveGround >= h && Double.random(in: 0...1) < 0.45 {
+                                mountLedge(x: h == SceneLayout.panelHeight ? lastWidth - 60 : lastWidth - 48, height: h)
+                                return true
+                            }
+                        }
+                    }
+                }
                 if climbDir > 0 && heightAboveGround >= ceilingClearance {
                     // Transicion de esquina pared -> techo
                     heightAboveGround = ceilingClearance
@@ -1693,6 +1804,27 @@ final class StickmanController: ObservableObject {
             return true
         }
         return false
+    }
+
+    /// R4: encaramarse de la pared a una repisa de la escena SIN
+    /// soltarse: pasa a superficie de suelo SOBRE la repisa (el
+    /// mundo ya la ofrece como suelo en worldGroundHeight, asi que
+    /// groundSnap lo mantiene ahi). A veces se queda SENTADO en el
+    /// borde con las piernas colgando (dangling), como en los
+    /// videos; si no, se planta de pie en la repisa.
+    private func mountLedge(x ledgeX: CGFloat, height: CGFloat) {
+        surface = .floor
+        platformHeight = 0
+        x = ledgeX
+        heightAboveGround = height
+        velocityY = 0; velocityX = 0
+        if Double.random(in: 0...1) < 0.4 {
+            startOverride(.dangling, duration: Double.random(in: 2.0...3.2))
+            setThought("un descansito aquí colgado")
+        } else {
+            action = .idle
+            setThought("¡arriba!")
+        }
     }
 
     private func updateLocomotion(dt: Double) {
