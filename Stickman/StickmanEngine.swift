@@ -220,6 +220,104 @@ enum StickmanAction: String, CaseIterable {
     }
 }
 
+// MARK: - ESCENA V11: el mundo es el programa del Animador
+//
+// El diagnóstico del usuario (2026-11-12): el muñeco y el movimiento
+// ya valen; lo que «no se parece» es el MUNDO. En los vídeos el
+// stickman vive DENTRO del programa de animación: el lienzo es su
+// escenario, la línea de tiempo su suelo con repisas, la barra de
+// herramientas su pared escalable y los paneles sus plataformas.
+// SceneLayout es la ÚNICA fuente de geometría de ese mundo: el motor
+// la usa para registrar las superficies ESTÁTICAS en el MISMO sistema
+// de suelo de siempre (groundTotalHeight, junto a trazos del usuario
+// y objetos dibujados — nada de un segundo sistema de colisiones) y
+// la vista la usa para dibujarlo. Alturas en unidades de mundo
+// (puntos sobre la línea de suelo); la pantalla sale de floorY.
+
+struct SceneLayout {
+    let width: CGFloat
+    let height: CGFloat
+    let phase: Double
+
+    // Constantes del mundo (históricas: coinciden con las plataformas
+    // modales del cerebro — 46 «línea de tiempo», 104 «botones» — para
+    // que los planes de trepar de siempre aterricen en sitios VISIBLES).
+    static let floorInset: CGFloat = 10       // línea de suelo a height-10 (vista y cinemáticas)
+    static let menuBarHeight: CGFloat = 20    // franja de menús: su borde inferior es el techo
+    static let timelineHeight: CGFloat = 46   // borde superior de la línea de tiempo
+    static let stepHeight: CGFloat = 23       // escalón de acceso a la línea de tiempo
+    static let panelHeight: CGFloat = 104     // repisa del panel de Propiedades
+    static let shelfHeight: CGFloat = 196     // repisa alta de Muestras de color
+    static let playheadTop: CGFloat = 58      // superficie del cabezal (= 46 + su asa de 12)
+
+    var floorY: CGFloat { height - Self.floorInset }   // pantalla: y de la línea de suelo
+    func screenY(forWorldHeight h: CGFloat) -> CGFloat { floorY - h }
+
+    // Línea de tiempo (franja inferior) y su escalón de acceso
+    var timelineMinX: CGFloat { 54 }
+    var stepMinX: CGFloat { 27 }
+    var stepMaxX: CGFloat { 56 }
+
+    // Barra de herramientas interior (sobre la pared izquierda):
+    // celdas de 36 pt con paso 44; el borde superior de cada icono es
+    // una repisa real (se llega trepando la pared o cayendo sobre él).
+    var toolbarMaxX: CGFloat { 44 }
+    var toolCellMinX: CGFloat { 3 }
+    var toolCellMaxX: CGFloat { 41 }
+    var toolCellSize: CGFloat { 36 }
+    var toolCellPitch: CGFloat { 44 }
+    var toolFirstCellTopY: CGFloat { Self.menuBarHeight + 8 }
+
+    /// Bordes superiores (pantalla) de las celdas-icono, de arriba
+    /// abajo. Solo entran las que quedan con margen sobre la línea de
+    /// tiempo (máx. 7, las herramientas del diseño).
+    var toolCellTopYs: [CGFloat] {
+        var result: [CGFloat] = []
+        var topY = toolFirstCellTopY
+        while result.count < 7 {
+            if floorY - topY < Self.timelineHeight + 44 { break }
+            result.append(topY)
+            topY += toolCellPitch
+        }
+        return result
+    }
+    /// Las mismas celdas como alturas de mundo (superficies).
+    var toolLedgeHeights: [CGFloat] { toolCellTopYs.map { floorY - $0 } }
+
+    // Paneles de la derecha (repisas-plataforma)
+    var panelMinX: CGFloat { width - 126 }
+    var panelMaxX: CGFloat { width - 4 }
+    var shelfMinX: CGFloat { width - 92 }
+    var shelfMaxX: CGFloat { width - 4 }
+
+    /// Cabezal de reproducción: deriva lenta y DETERMINISTA desde la
+    /// fase (misma fórmula en motor y vista; sin estado ni coste).
+    var playheadX: CGFloat {
+        let base = width * 0.60
+        let drift = CGFloat(sin(phase * 0.07)) * 36
+        return min(max(base + drift, 130), width - 30)
+    }
+    var playheadHalfWidth: CGFloat { 7 }
+
+    /// Superficie ESTÁTICA del mundo en x (altura de mundo), acotada
+    /// por `cap` como en strokeGroundHeight: lo que queda por encima
+    /// del tope no cuenta (no se engancha a mitad de caída).
+    func worldGroundHeight(at px: CGFloat, notAbove cap: CGFloat) -> CGFloat? {
+        var best: CGFloat? = nil
+        func offer(_ h: CGFloat, _ lo: CGFloat, _ hi: CGFloat) {
+            if h > cap { return }
+            if px >= lo && px <= hi, best == nil || h > best! { best = h }
+        }
+        offer(Self.timelineHeight, timelineMinX, width)          // borde de la línea de tiempo
+        offer(Self.stepHeight, stepMinX, stepMaxX)               // escalón de acceso
+        offer(Self.playheadTop, playheadX - playheadHalfWidth, playheadX + playheadHalfWidth)
+        for h in toolLedgeHeights { offer(h, toolCellMinX, toolCellMaxX) }  // iconos-repisa
+        offer(Self.panelHeight, panelMinX, panelMaxX)            // panel de Propiedades
+        offer(Self.shelfHeight, shelfMinX, shelfMaxX)            // repisa de Muestras
+        return best
+    }
+}
+
 // MARK: - Controlador v2
 //
 // Novedades frente a la v1:
@@ -708,10 +806,19 @@ final class StickmanController: ObservableObject {
         return best
     }
 
+    /// Suelo que forma el MUNDO-programa (escena v11): el borde de la
+    /// línea de tiempo y su escalón, el cabezal, las repisas de los
+    /// iconos de la barra de herramientas y los paneles de la derecha.
+    /// Geometría en SceneLayout (la misma que dibuja la vista).
+    private func worldGroundHeight(at px: CGFloat, notAbove cap: CGFloat) -> CGFloat? {
+        SceneLayout(width: lastWidth, height: lastHeight, phase: phase).worldGroundHeight(at: px, notAbove: cap)
+    }
+
     /// Suelo total que se puede pisar en px: plataforma del mundo,
     /// trazos del usuario y objetos dibujados, siempre bajo `cap`.
     private func groundTotalHeight(at px: CGFloat, notAbove cap: CGFloat) -> CGFloat {
         var g = platformHeight
+        if let w = worldGroundHeight(at: px, notAbove: cap), w > g { g = w }
         if let s = strokeGroundHeight(at: px, notAbove: cap), s > g { g = s }
         if let o = objectGroundHeight(at: px, notAbove: cap), o > g { g = o }
         return g
