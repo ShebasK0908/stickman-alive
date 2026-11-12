@@ -7,7 +7,8 @@ import AppIntents
 // The Second Coming vive en la pantalla de inicio. Dibujo 100% procedural
 // con SwiftUI Canvas (mismas proporciones que la app: escala global
 // 0,8 aplicada en el Canvas, cuello x1,06 y cabeza x1,28, anillo de
-// 52 — espejo de ViewTuning en StickmanView).
+// 58 — espejo de ViewTuning en StickmanView; R10 lo subio de 52 y
+// la R4 lo verifico con la formula estricta: 34,5 % del alto).
 //
 // Las poses ROTAN por la timeline (de pie, caminando, sentado,
 // durmiendo, pose de poder) y los botones (iOS 17+, App Intents)
