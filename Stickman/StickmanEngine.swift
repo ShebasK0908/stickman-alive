@@ -522,6 +522,7 @@ final class StickmanController: ObservableObject {
     private func startOverride(_ a: StickmanAction, duration: Double) {
         action = a; mode = .override; overrideTimer = duration
         shieldKind = nil
+        if a != .hangingWall { edgeHangPoint = nil }   // R10: cualquier otra accion lo descuelga del borde
         if a != .hiding { hidingObjectID = nil }
         // v6: una cadena pendiente solo sobrevive al arranque de su propio clip
         if a != .tripping { tripChainPending = false }
@@ -648,6 +649,42 @@ final class StickmanController: ObservableObject {
             }
         }
         return best
+    }
+
+    /// R10: BORDES AGARRABLES de los trazos del usuario: los extremos
+    /// de cada tramo caminable (donde la plataforma dibujada se
+    /// acaba). Cada borde trae su direccion «hacia dentro» (hacia
+    /// donde sigue la plataforma).
+    private func strokeEdges() -> [(point: CGPoint, inward: CGFloat)] {
+        var edges: [(point: CGPoint, inward: CGFloat)] = []
+        for stroke in userStrokes {
+            let pts = stroke.points
+            guard pts.count > 1 else { continue }
+            for i in 0..<(pts.count - 1) {
+                let a = pts[i], b = pts[i + 1]
+                guard strokeSegmentWalkable(a, b) else { continue }
+                let prevWalk = i > 0 ? strokeSegmentWalkable(pts[i - 1], pts[i]) : false
+                let nextWalk = i + 2 < pts.count ? strokeSegmentWalkable(pts[i + 1], pts[i + 2]) : false
+                if !prevWalk { edges.append((point: a, inward: b.x >= a.x ? 1 : -1)) }
+                if !nextWalk { edges.append((point: b, inward: a.x >= b.x ? 1 : -1)) }
+            }
+        }
+        return edges
+    }
+
+    /// R10: se agarra del borde de un trazo y queda COLGANDO de el
+    /// (clip hangWall, pendulo de 2,4 s). Los pies quedan 74 pt por
+    /// debajo del borde: su mano agarrada (pose hangWall) llega a
+    /// ~77 pt sobre los pies, asi que la mano cae sobre el borde.
+    private func startEdgeHang(at edge: CGPoint, inward: CGFloat) {
+        edgeHangPoint = edge
+        edgeHangInward = inward
+        x = edge.x
+        heightAboveGround = max(0, edge.y - platformHeight - 74)
+        velocityX = 0; velocityY = 0
+        setFacing(inward >= 0 ? 1 : -1)
+        startOverride(.hangingWall, duration: Double.random(in: 1.5...3.2))
+        setThought("¡por los pelos!")
     }
 
     /// Suelo que forman los OBJETOS que el propio stickman dibuja
@@ -797,7 +834,7 @@ final class StickmanController: ObservableObject {
         guard isAlive else { return }
         if surface != .floor { snapToFloor() }   // v3: agarrarlo lo despega de pared/techo
         interactionBrain.registerGrabAttempt(now: elapsed)
-        tripChainPending = false; pendingEscapeThrow = nil   // v6: agarrarlo corta las cadenas
+        tripChainPending = false; pendingEscapeThrow = nil; edgeHangPoint = nil   // v6: agarrarlo corta las cadenas; R10: y lo descuelga del borde
         action = .grabbed; mode = .physics; velocityX = 0; velocityY = 0
         lastDragX = x; pinchLean = 0
         moveSpeed = 0
@@ -1197,6 +1234,8 @@ final class StickmanController: ObservableObject {
         // IA tactil (solo con el dedo presente y sin fisicas en curso)
         evaluateInteractionAI(dt: dt)
 
+        if edgeGrabCooldown > 0 { edgeGrabCooldown -= dt }   // R10: respiro del agarre de borde
+
         // ------- SALTO CON ANTICIPACION -------
         if jumpWindup > 0 {
             jumpWindup -= dt
@@ -1239,6 +1278,19 @@ final class StickmanController: ObservableObject {
                         else { action = .idle; mode = .plan; planGapTimer = 0.2 }  // R3-2 (B)
                     }
                 }
+                // R10: cayendo junto al BORDE de un trazo, a veces se
+                // agarra en el ultimo momento y queda colgando de el
+                // (era el hueco que faltaba de «dibujos solidos»).
+                if edgeHangPoint == nil, edgeGrabCooldown <= 0, velocityY < -50 {
+                    let feetNow = platformHeight + heightAboveGround
+                    for e in strokeEdges() {
+                        if abs(x - e.point.x) <= 24, e.point.y > feetNow + 20, e.point.y < feetNow + 95, e.point.y - platformHeight >= 60 {
+                            if Double.random(in: 0...1) < 0.7 { startEdgeHang(at: e.point, inward: e.inward) }
+                            else { edgeGrabCooldown = 0.4 }
+                            break
+                        }
+                    }
+                }
                 clampToStage(stageWidth)
                 return
             }
@@ -1248,6 +1300,15 @@ final class StickmanController: ObservableObject {
         if mode == .override {
             overrideTimer -= dt
             updateLocomotion(dt: dt)
+            // R10: colgado del borde de un trazo: clavado al borde
+            // tras la locomocion; si otra accion lo interrumpe, el
+            // agarre se suelta solo (autolimpieza).
+            if let hang = edgeHangPoint {
+                if action == .hangingWall {
+                    x = hang.x
+                    heightAboveGround = max(0, hang.y - platformHeight - 74)
+                } else { edgeHangPoint = nil }
+            }
             // Escondite: al llegar al objeto, se agazapa tras el
             if let target = hideTargetX, action == .walking, abs(x - target) < 20 {
                 hideTargetX = nil
@@ -1256,7 +1317,22 @@ final class StickmanController: ObservableObject {
                 hidingObjectID = hideObjectID
             }
             if overrideTimer <= 0 {
-                if let pending = pendingEscapeThrow {
+                if let hang = edgeHangPoint {
+                    // R10: fin de colgar del borde de un trazo: o se
+                    // impulsa y SUBE a la plataforma, o se suelta.
+                    edgeHangPoint = nil
+                    if Double.random(in: 0...1) < 0.55 {
+                        x = hang.x + edgeHangInward * 16
+                        heightAboveGround = hang.y - platformHeight
+                        velocityY = 250; velocityX = edgeHangInward * 90
+                        action = .jumping; mode = .physics
+                        setThought("¡arriba!")
+                    } else {
+                        velocityY = -10; velocityX = 0
+                        action = .jumping; mode = .physics
+                        setThought("me suelto")
+                    }
+                } else if let pending = pendingEscapeThrow {
                     // v6: fin de escapeBurst -> sale lanzado (como hacia antes del cableado)
                     pendingEscapeThrow = nil
                     velocityX = pending.vx; velocityY = pending.vy
@@ -1370,9 +1446,13 @@ final class StickmanController: ObservableObject {
     private var pendingEscapeThrow: (vx: CGFloat, vy: CGFloat)? = nil  // v6: lanzamiento al terminar escapeBurst
     private var loadedChainPending = false      // v8/v9: tras carryingLoaded encadena throwingLoaded
     private var sleepRollPending = false        // v9: tras sleeping puede encadenar sleepRolling
+    private var edgeHangPoint: CGPoint? = nil   // R10: borde de trazo del que cuelga (x, altura mundo)
+    private var edgeHangInward: CGFloat = 1     // R10: direccion hacia el interior de la plataforma
+    private var edgeGrabCooldown: Double = 0    // R10: respiro entre intentos de agarre cayendo
 
     /// Si el suelo (plataforma o trazo del usuario) sube/baja bajo sus pies, se ajusta o cae.
     private func groundSnap(dt: Double) {
+        if edgeHangPoint != nil { return }   // R10: colgado de un borde, el suelo no manda
         if action == .flying || action == .escapeBurst || isDragged { return }
         if surface != .floor { return }   // v3: anclado a pared/techo no hay suelo que ajustar
         // Tope = sus pies + escalon SUBIBLE (26): el asiento de una
@@ -1383,6 +1463,21 @@ final class StickmanController: ObservableObject {
         if heightAboveGround < target - 1 {
             heightAboveGround = target      // sube a la plataforma/trazo (escalon)
         } else if heightAboveGround > target + 5 {
+            // R10: si el suelo que desaparece es el BORDE de un trazo
+            // y el iba a pie, a veces se agarra del borde en vez de
+            // caer: se le ve colgar, balancearse, y luego subir o
+            // soltarse. Solo si hay sitio para colgar (>= 60 de alto).
+            if edgeHangPoint == nil, [.walking, .running, .idle].contains(action) {
+                let feetNow = platformHeight + heightAboveGround
+                var grabbedEdge = false
+                for e in strokeEdges() {
+                    if abs(x - e.point.x) <= 22, abs(e.point.y - feetNow) <= 8, e.point.y - platformHeight >= 60 {
+                        if Double.random(in: 0...1) < 0.55 { startEdgeHang(at: e.point, inward: e.inward); grabbedEdge = true }
+                        break
+                    }
+                }
+                if grabbedEdge { return }
+            }
             velocityY = 0; mode = .physics   // el suelo desaparece: cae
             // v9: si iba cargando, cae abrazando la carga (fallWithObject)
             action = action == .carryingLoaded ? .fallingWithObject : .jumping

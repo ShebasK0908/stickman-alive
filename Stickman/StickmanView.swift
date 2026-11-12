@@ -49,11 +49,14 @@ struct StickmanCanvasView: View {
         static let torsoFactor: CGFloat = 1.06
         static let headOffFactor: CGFloat = 1.28
         /// Diametro del anillo de la cabeza, en unidades de pose
-        /// (antes de figureScale): 52 -> ~34 % del alto de la figura,
-        /// dentro del rango 33-37 % de los dos modelos del usuario.
-        /// (La ronda 2 lo dejó en 39 buscando el 23-26 % del primer
-        /// plano; el .nodes y la foto definitiva mandan más cabeza.)
-        static let headDiameter: CGFloat = 52
+        /// (antes de figureScale). R10 (2026-11-12): la MEDICION
+        /// ESTRICTA sobre el render con Ø 52 daba 31,5 % del alto —
+        /// por debajo del 33-37 % de los dos modelos del usuario (su
+        /// foto «ASÍ» y el .nodes) — y el usuario volvio a decir que
+        /// «no se parece». Ø 58 lo lleva a ~35 % estricto, el centro
+        /// del rango. (La ronda 2 lo dejó en 39 buscando el 23-26 %
+        /// del primer plano; el .nodes y la foto definitiva mandan.)
+        static let headDiameter: CGFloat = 58
         /// Trazo del anillo de la cabeza, en unidades de pose: 8,5
         /// (~16 % del Ø; el .nodes da ~14 %, el plano de foto ~23 %:
         /// compromiso documentado). El trazo del CUERPO sale de

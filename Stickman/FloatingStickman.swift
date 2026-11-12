@@ -310,8 +310,9 @@ enum FloatingRenderer {
 
         // Cabeza de ANILLO hueco, con el squash AMORTIGUADO (0.93–1.07)
         // (diametro espejo de ViewTuning.headDiameter en StickmanView,
-        // ya multiplicado por la escala 0,8: 52 x 0,8)
-        let headD: CGFloat = 52 * 0.8
+        // ya multiplicado por la escala 0,8: 58 x 0,8 — R10, cabeza
+        // al ~35 % estricto del alto, como en los modelos del usuario)
+        let headD: CGFloat = 58 * 0.8
         let sq = min(1.07, max(0.93, pose.squash))
         let headH = headD * sq
         let headW = headD * (1 + (1 - sq) * 0.55)
